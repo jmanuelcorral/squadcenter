@@ -21,7 +21,7 @@ export function registerSessionHandlers(ipcMain: IpcMain): void {
     const session = getSession(id);
     if (!session) throw new Error('Session not found');
     const messages = getSessionMessages(id);
-    return { session, messages };
+    return { ...session, messages };
   });
 
   // sessions:create — start a new session (shell or copilot via `type` field)
