@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Plus, FolderOpen, Zap } from 'lucide-react';
-import { fetchProjects } from '../lib/api';
+import { Plus, FolderOpen, Zap, Terminal } from 'lucide-react';
+import { fetchProjects, getSessions } from '../lib/api';
 import type { Project } from '@shared/types';
 import ProjectCard from '../components/ProjectCard';
 import CreateProjectModal from '../components/CreateProjectModal';
@@ -11,12 +11,17 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [activeSessionCount, setActiveSessionCount] = useState(0);
 
   useEffect(() => {
     fetchProjects()
       .then(setProjects)
       .catch(() => {})
       .finally(() => setLoading(false));
+
+    getSessions()
+      .then((sessions) => setActiveSessionCount(sessions.filter((s) => s.status === 'active').length))
+      .catch(() => {});
   }, []);
 
   function handleCreated(project: Project) {
@@ -36,6 +41,12 @@ export default function Dashboard() {
           <p className="text-sm text-slate-400 mt-1">Manage your Squad orchestration projects</p>
         </div>
         <div className="flex items-center gap-3">
+          {activeSessionCount > 0 && (
+            <div className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-emerald-400 bg-emerald-500/10 ring-1 ring-emerald-500/20">
+              <Terminal className="w-4 h-4" />
+              <span>{activeSessionCount} active session{activeSessionCount !== 1 ? 's' : ''}</span>
+            </div>
+          )}
           <button
             onClick={() => setShowImport(true)}
             className="flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-slate-300 ring-1 ring-white/10 hover:bg-white/5 hover:text-white transition-all duration-200"

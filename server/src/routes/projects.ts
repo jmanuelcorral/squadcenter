@@ -188,6 +188,28 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// POST /api/projects/:id/setup-hooks — Generate Copilot CLI hooks config
+router.post('/:id/setup-hooks', async (req, res) => {
+  try {
+    const projects = await loadProjects();
+    const project = projects.find(p => p.id === req.params.id);
+
+    if (!project) {
+      res.status(404).json({ error: 'Project not found' });
+      return;
+    }
+
+    const { generateHooksConfig } = await import('../services/hooks-generator.js');
+    const serverUrl = req.body.serverUrl || `http://localhost:${Number(process.env.PORT) || 3001}`;
+    const hooksPath = await generateHooksConfig(project.path, serverUrl);
+
+    res.json({ success: true, hooksPath });
+  } catch (err) {
+    console.error('Failed to setup hooks:', err);
+    res.status(500).json({ error: 'Failed to generate hooks config' });
+  }
+});
+
 // POST /api/projects/:id/import — Import team from .squad/team.md
 router.post('/:id/import', async (req, res) => {
   try {

@@ -1,7 +1,13 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import type { Server } from 'http';
 
-type EventType = 'project-updated' | 'notification' | 'agent-status-changed';
+type EventType =
+  | 'project-updated'
+  | 'notification'
+  | 'agent-status-changed'
+  | 'session:output'
+  | 'session:status'
+  | 'hook:event';
 
 interface WsMessage {
   type: EventType;

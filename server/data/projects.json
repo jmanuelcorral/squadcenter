@@ -1,1 +1,49 @@
-[]
+[
+  {
+    "id": "0e0a1c4c-74e0-490b-9978-852a2a4e34bb",
+    "name": "sessionkeda — Sesión técnica sobre KEDA en AKS (slides, entorno Azure, guion de demo)",
+    "path": "D:\\gitrepos\\personal\\sessionkeda",
+    "description": "",
+    "createdAt": "2026-03-25T13:29:30.853Z",
+    "updatedAt": "2026-03-25T13:29:30.853Z",
+    "team": [
+      {
+        "name": "Keaton",
+        "role": "Lead",
+        "emoji": "🏗️",
+        "status": "working"
+      },
+      {
+        "name": "McManus",
+        "role": "Cloud/DevOps",
+        "emoji": "⚙️",
+        "status": "working"
+      },
+      {
+        "name": "Fenster",
+        "role": "Content Lead",
+        "emoji": "📝",
+        "status": "working"
+      },
+      {
+        "name": "Hockney",
+        "role": "Demo Architect",
+        "emoji": "🎬",
+        "status": "working"
+      },
+      {
+        "name": "Scribe",
+        "role": "Session Logger",
+        "emoji": "📋",
+        "status": "working"
+      },
+      {
+        "name": "Ralph",
+        "role": "Work Monitor",
+        "emoji": "🔄",
+        "status": "working"
+      }
+    ],
+    "status": "active"
+  }
+]

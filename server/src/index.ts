@@ -5,6 +5,9 @@ import projectRoutes from './routes/projects.js';
 import squadRoutes from './routes/squad.js';
 import notificationRoutes from './routes/notifications.js';
 import filesystemRoutes from './routes/filesystem.js';
+import sessionRoutes from './routes/sessions.js';
+import projectStatusRoutes from './routes/project-status.js';
+import hooksRoutes from './routes/hooks.js';
 import { initWebSocket } from './services/websocket.js';
 
 const app = express();
@@ -19,6 +22,9 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/projects', squadRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/filesystem', filesystemRoutes);
+app.use('/api/sessions', sessionRoutes);
+app.use('/api/projects', projectStatusRoutes);
+app.use('/api/hooks', hooksRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {

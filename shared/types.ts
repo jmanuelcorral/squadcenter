@@ -34,3 +34,46 @@ export interface ChatMessage {
   content: string;
   timestamp: string;
 }
+
+export interface Session {
+  id: string;
+  projectId: string;
+  projectPath: string;
+  status: 'starting' | 'active' | 'stopped' | 'error';
+  startedAt: string;
+  pid?: number;
+  lastOutput?: string;
+}
+
+export interface SessionMessage {
+  id: string;
+  sessionId: string;
+  type: 'input' | 'output' | 'system';
+  content: string;
+  timestamp: string;
+}
+
+export interface ProjectStatus {
+  active: boolean;
+  managed: boolean;
+  pid?: number;
+  sessionId?: string;
+  hookDetected?: boolean;
+}
+
+export type HookEventType =
+  | 'sessionStart'
+  | 'sessionEnd'
+  | 'userPromptSubmitted'
+  | 'preToolUse'
+  | 'postToolUse'
+  | 'errorOccurred';
+
+export interface HookEvent {
+  id: string;
+  projectId: string;
+  projectPath: string;
+  eventType: HookEventType;
+  timestamp: string;
+  data: Record<string, any>;
+}

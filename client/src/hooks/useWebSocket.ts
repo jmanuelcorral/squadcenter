@@ -9,11 +9,16 @@ export function useWebSocket() {
   const [messages, setMessages] = useState<WebSocketMessage[]>([]);
   const [connected, setConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const connect = useCallback(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+    // In development, connect directly to the backend server on port 3001
+    // In production, connect via the same host
+    const host = window.location.port === '5173'
+      ? `${window.location.hostname}:3001`
+      : window.location.host;
+    const ws = new WebSocket(`${protocol}//${host}/ws`);
     wsRef.current = ws;
 
     ws.onopen = () => {

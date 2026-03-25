@@ -1,10 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Users, Activity, Trash2 } from 'lucide-react';
-import { fetchProject, fetchTeam, fetchLogs, deleteProject } from '../lib/api';
+import { ChevronLeft, Users, Activity, Trash2, Radio } from 'lucide-react';
+import { fetchProject, fetchTeam, fetchLogs, deleteProject, getHookEvents } from '../lib/api';
 import type { Project, TeamMember, ChatMessage } from '@shared/types';
+import type { HookEvent } from '../lib/api';
 import TeamPanel from '../components/TeamPanel';
 import ActivityFeed from '../components/ActivityFeed';
+import ActivityTimeline from '../components/ActivityTimeline';
+import SetupHooksButton from '../components/SetupHooksButton';
 
 export default function ProjectView() {
   const { id } = useParams<{ id: string }>();
@@ -13,8 +16,9 @@ export default function ProjectView() {
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [logs, setLogs] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'activity' | 'team'>('activity');
+  const [activeTab, setActiveTab] = useState<'activity' | 'team' | 'monitoring'>('activity');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [hookEventCount, setHookEventCount] = useState(0);
   const feedRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -23,10 +27,12 @@ export default function ProjectView() {
       fetchProject(id),
       fetchTeam(id).catch(() => [] as TeamMember[]),
       fetchLogs(id).catch(() => [] as ChatMessage[]),
-    ]).then(([proj, tm, lg]) => {
+      getHookEvents(id, 10).catch(() => [] as HookEvent[]),
+    ]).then(([proj, tm, lg, hookEvts]) => {
       setProject(proj);
       setTeam(tm);
       setLogs(lg);
+      setHookEventCount(hookEvts.length);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, [id]);
@@ -102,13 +108,16 @@ export default function ProjectView() {
           )}
         </div>
 
-        <button
-          onClick={() => setShowDeleteConfirm(true)}
-          className="p-2 text-slate-500 hover:text-red-400 rounded-lg hover:bg-red-500/10 transition-all"
-          title="Delete project"
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-3">
+          <SetupHooksButton projectId={id!} />
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="p-2 text-slate-500 hover:text-red-400 rounded-lg hover:bg-red-500/10 transition-all"
+            title="Delete project"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* Mobile tabs */}
@@ -131,11 +140,25 @@ export default function ProjectView() {
           <Users className="w-4 h-4" />
           Team
         </button>
+        <button
+          onClick={() => setActiveTab('monitoring')}
+          className={`flex-1 flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-all ${
+            activeTab === 'monitoring' ? 'bg-white/10 text-white' : 'text-slate-400'
+          }`}
+        >
+          <Radio className="w-4 h-4" />
+          Monitoring
+          {hookEventCount > 0 && (
+            <span className="flex h-4 min-w-[16px] items-center justify-center rounded-full bg-emerald-500/20 px-1 text-[10px] font-bold text-emerald-400">
+              {hookEventCount}
+            </span>
+          )}
+        </button>
       </div>
 
-      {/* Two-column layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Activity Feed — left (main area) */}
+      {/* Three-column layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Activity Feed — left */}
         <div className={`lg:col-span-2 ${activeTab !== 'activity' ? 'hidden lg:block' : ''}`}>
           <div className="rounded-xl bg-slate-800/40 ring-1 ring-white/10 overflow-hidden">
             <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5">
@@ -145,6 +168,24 @@ export default function ProjectView() {
             </div>
             <div ref={feedRef} className="max-h-[calc(100vh-320px)] overflow-y-auto">
               <ActivityFeed messages={logs} />
+            </div>
+          </div>
+        </div>
+
+        {/* Hook Events Timeline — center */}
+        <div className={`${activeTab !== 'monitoring' ? 'hidden lg:block' : ''}`}>
+          <div className="rounded-xl bg-slate-800/40 ring-1 ring-white/10 overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5">
+              <Radio className="w-4 h-4 text-cyan-400" />
+              <h2 className="text-sm font-semibold text-white">Monitoring</h2>
+              {hookEventCount > 0 && (
+                <span className="flex h-4 min-w-[16px] items-center justify-center rounded-full bg-cyan-500/15 px-1 text-[10px] font-bold text-cyan-400 ml-auto">
+                  {hookEventCount}
+                </span>
+              )}
+            </div>
+            <div className="max-h-[calc(100vh-320px)] overflow-hidden">
+              <ActivityTimeline projectId={id!} />
             </div>
           </div>
         </div>

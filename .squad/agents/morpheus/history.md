@@ -31,3 +31,42 @@
 - Added `POST /api/projects/import` route (no `:id` param) in `projects.ts` — declared before `/:id` routes to avoid Express param collision
   - Validates `.squad/` exists at given path, parses project name from `team.md` blockquote, reads team members, creates new project entry
 - All three changes compile clean with zero TypeScript errors
+
+### 2025-07-15 — Built session management backend
+- Created `server/src/services/session-manager.ts` — in-memory session lifecycle using `child_process.spawn`
+  - Spawns `cmd.exe /K` (Windows) or `/bin/bash` (Unix) in the project directory
+  - Tracks sessions in a `Map<string, ManagedSession>`, each with output buffer (500 lines), messages, and child process reference
+  - Captures stdout/stderr, broadcasts output via WebSocket `session:output` events
+  - Detects process exit/error and broadcasts `session:status` updates
+  - Methods: startSession, stopSession, sendInput, getSession, getSessionOutput, getSessionMessages, listSessions, findSessionByProject, cleanupSessions
+  - Deduplicates: if a session for the same projectId is already active, returns it instead of spawning another
+- Created `server/src/routes/sessions.ts` — 6 REST endpoints for session CRUD + I/O
+  - GET/POST `/api/sessions`, GET/DELETE `/api/sessions/:id`, POST `/api/sessions/:id/input`, GET `/api/sessions/:id/output`
+- Created `server/src/routes/project-status.ts` — `GET /api/projects/:projectId/status`
+  - Checks managed sessions first, then falls back to PowerShell process detection (`Get-CimInstance Win32_Process` filtering for node+copilot/ghcs)
+  - Returns `{ active, managed, pid?, sessionId? }`
+- Updated `shared/types.ts` with `Session`, `SessionMessage`, and `ProjectStatus` interfaces
+- Extended WebSocket `EventType` union with `session:output` and `session:status`
+- Mounted all routes in `server/src/index.ts` — sessions at `/api/sessions`, project-status at `/api/projects`
+- TypeScript compiles clean with zero errors
+
+### 2025-07-17 — Added hooks-based monitoring system
+- Created `server/src/services/hook-event-store.ts` — in-memory event store (Map<string, HookEvent[]>)
+  - Stores up to 1000 events per project (FIFO), keyed by normalized projectPath
+  - Methods: addEvent, getEvents, getEventsByProject, getEventsByProjectFiltered, clearEvents, hasActiveHookSession, getActivitySummary
+  - Auto-resolves projectId from projects.json via path matching
+  - hasActiveHookSession tracks sessionStart/sessionEnd pairs for external session detection
+- Created `server/src/routes/hooks.ts` — 3 endpoints for hook callbacks and queries
+  - POST `/api/hooks/event` — receives hook callbacks, validates eventType, stores event, broadcasts via WebSocket
+  - GET `/api/hooks/events/:projectId` — returns recent events with optional eventType filter + limit
+  - GET `/api/hooks/events/:projectId/activity` — returns event counts grouped by type
+  - sessionStart/sessionEnd events trigger both `hook:event` and `session:status` WebSocket broadcasts
+- Created `server/src/services/hooks-generator.ts` — generates `.github/hooks/` config for any project
+  - Writes `hooks.json` (version 1 format) with all 6 hook types configured
+  - Generates 6 PowerShell scripts that read stdin JSON, POST to squadCenter API via Invoke-RestMethod
+  - Scripts fail silently (try/catch) so hooks never block the CLI; 5-sec timeout on HTTP calls
+- Added `POST /api/projects/:id/setup-hooks` to projects.ts — triggers hooks generation for a project
+- Updated `shared/types.ts` with HookEventType union and HookEvent interface; added hookDetected to ProjectStatus
+- Extended WebSocket EventType with `hook:event`
+- Enhanced project-status.ts — checks hook event store for active sessions before falling back to process detection
+- All routes mounted in index.ts; TypeScript compiles clean with zero errors
