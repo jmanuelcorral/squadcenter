@@ -1,0 +1,17 @@
+{
+  "format_version": 1,
+  "assignments": [
+    {
+      "assignment_id": "squadcenter-001",
+      "universe": "the-matrix",
+      "timestamp": "2026-03-25T12:14:00Z",
+      "agents": {
+        "Neo": "Lead",
+        "Trinity": "Frontend Dev",
+        "Morpheus": "Backend Dev",
+        "Switch": "Tester"
+      },
+      "reason": "Initial team for web app project — The Matrix universe fits orchestration/control theme"
+    }
+  ]
+}

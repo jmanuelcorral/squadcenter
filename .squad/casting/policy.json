@@ -1,0 +1,6 @@
+{
+  "format_version": 1,
+  "universes_allowed": ["the-matrix"],
+  "max_capacity_per_universe": 12,
+  "overflow_strategy": "diegetic-expansion"
+}
