@@ -21,7 +21,7 @@ function createWindow(): void {
     height: 900,
     backgroundColor: '#0f172a',
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, 'preload.mjs'),
       nodeIntegration: false,
       contextIsolation: true,
     },
@@ -32,6 +32,7 @@ function createWindow(): void {
   // Dev mode: load Vite dev server URL
   if (process.env.VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL);
+    mainWindow.webContents.openDevTools();
   } else {
     // Production: load built files
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
