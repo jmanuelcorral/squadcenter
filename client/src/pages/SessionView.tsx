@@ -23,6 +23,7 @@ export default function SessionView() {
   const [messages, setMessages] = useState<SessionMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [stopping, setStopping] = useState(false);
+  const [thinking, setThinking] = useState(false);
   const [showActivity, setShowActivity] = useState(true);
   const { messages: wsMessages } = useWebSocket();
   const lastWsMsgIndexRef = useRef(0);
@@ -52,6 +53,7 @@ export default function SessionView() {
       if (msg.type === 'session:output') {
         const payload = msg.payload as { sessionId: string; message?: SessionMessage; content?: string };
         if (payload.sessionId === id) {
+          setThinking(false);
           if (payload.message) {
             setMessages((prev) => {
               // Deduplicate by ID
@@ -94,6 +96,9 @@ export default function SessionView() {
         timestamp: new Date().toISOString(),
       };
       setMessages((prev) => [...prev, optimistic]);
+      if (session?.type === 'copilot') {
+        setThinking(true);
+      }
       try {
         await sendSessionInput(id, text);
       } catch {
@@ -212,13 +217,13 @@ export default function SessionView() {
         {/* Left: Terminal + Input */}
         <div className="flex flex-1 flex-col min-w-0">
           {/* Terminal */}
-          <SessionTerminal messages={messages} />
+          <SessionTerminal messages={messages} thinking={isCopilot && thinking} />
 
           {/* Input */}
           <ChatInput
             onSend={handleSend}
-            disabled={!isActive}
-            placeholder={isCopilot ? 'Ask Copilot...' : undefined}
+            disabled={!isActive || (isCopilot && thinking)}
+            placeholder={isCopilot ? (thinking ? 'Copilot is thinking...' : 'Ask Copilot...') : undefined}
           />
         </div>
 

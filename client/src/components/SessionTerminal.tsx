@@ -9,9 +9,10 @@ function formatTime(timestamp: string): string {
 interface SessionTerminalProps {
   messages: SessionMessage[];
   loading?: boolean;
+  thinking?: boolean;
 }
 
-export default function SessionTerminal({ messages, loading }: SessionTerminalProps) {
+export default function SessionTerminal({ messages, loading, thinking }: SessionTerminalProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -67,6 +68,18 @@ export default function SessionTerminal({ messages, loading }: SessionTerminalPr
           )}
         </div>
       ))}
+
+      {thinking && (
+        <div className="flex items-center gap-2 py-2 px-1">
+          <span className="text-violet-400 text-xs">✨</span>
+          <span className="text-violet-400/90 text-xs font-medium">Copilot is thinking</span>
+          <span className="flex gap-0.5">
+            <span className="h-1 w-1 rounded-full bg-violet-400 animate-[pulse_1.4s_ease-in-out_infinite]" />
+            <span className="h-1 w-1 rounded-full bg-violet-400 animate-[pulse_1.4s_ease-in-out_0.2s_infinite]" />
+            <span className="h-1 w-1 rounded-full bg-violet-400 animate-[pulse_1.4s_ease-in-out_0.4s_infinite]" />
+          </span>
+        </div>
+      )}
 
       <div ref={bottomRef} />
     </div>

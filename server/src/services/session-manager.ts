@@ -1,4 +1,4 @@
-import { spawn, type ChildProcess } from 'child_process';
+import { spawn, exec, type ChildProcess } from 'child_process';
 import crypto from 'crypto';
 import type { Session, SessionMessage } from '../../../shared/types.js';
 import { broadcast } from './websocket.js';
@@ -10,6 +10,8 @@ interface ManagedSession {
   process: ChildProcess;
   outputBuffer: string[];
   messages: SessionMessage[];
+  busy?: boolean;
+  currentChild?: ChildProcess;
 }
 
 const sessions = new Map<string, ManagedSession>();
@@ -156,52 +158,143 @@ export function startCopilotSession(projectId: string, projectPath: string): Ses
     projectId,
     projectPath,
     type: 'copilot',
-    status: 'starting',
+    status: 'active',
     startedAt: new Date().toISOString(),
+    pid: undefined,
   };
 
-  const isWindows = process.platform === 'win32';
-
-  const child = spawn('copilot', [], {
-    cwd: projectPath,
-    shell: isWindows,
-    stdio: ['pipe', 'pipe', 'pipe'],
-    env: { ...process.env },
-    windowsHide: true,
-  });
-
+  // Copilot sessions are logical — no persistent process.
+  // Each prompt spawns a one-shot `copilot -p` child.
   const managed: ManagedSession = {
     session,
-    process: child,
+    process: null as unknown as ChildProcess,
     outputBuffer: [],
     messages: [],
+    busy: false,
   };
 
   sessions.set(id, managed);
 
-  session.pid = child.pid;
-  session.status = 'active';
-
-  addMessage(managed, 'system', `Copilot session started in ${projectPath}`);
+  addMessage(managed, 'system', `Copilot session ready in ${projectPath}`);
   broadcastSessionStatus(session);
-  attachProcessHandlers(managed);
 
   return session;
+}
+
+function parseStderrStats(stderr: string): string | null {
+  // Extract usage stats like "Tokens: 150 in, 42 out | Requests: 3 Premium"
+  const lines = stderr.split('\n').filter((l) => l.trim().length > 0);
+  for (const line of lines) {
+    if (/request|token|premium/i.test(line)) {
+      return line.trim();
+    }
+  }
+  // Fallback: last non-empty line if it looks like stats
+  const last = lines[lines.length - 1];
+  if (last && last.length < 200) return last.trim();
+  return null;
+}
+
+function sendCopilotPrompt(managed: ManagedSession, text: string): boolean {
+  if (managed.busy) {
+    addMessage(managed, 'system', 'Copilot is still processing the previous prompt');
+    broadcastSessionOutput(managed.session.id, managed.messages[managed.messages.length - 1]);
+    return false;
+  }
+
+  managed.busy = true;
+  const { session } = managed;
+  const projectPath = session.projectPath;
+
+  addMessage(managed, 'input', text);
+  broadcastSessionOutput(session.id, managed.messages[managed.messages.length - 1]);
+
+  const thinkingMsg = addMessage(managed, 'system', 'Copilot is thinking...');
+  broadcastSessionOutput(session.id, thinkingMsg);
+
+  const escapedText = text.replace(/"/g, '\\"');
+  const child = exec(`copilot -p "${escapedText}"`, {
+    cwd: projectPath,
+    env: { ...process.env },
+    windowsHide: true,
+    maxBuffer: 10 * 1024 * 1024,
+  });
+
+  managed.currentChild = child;
+  session.pid = child.pid;
+
+  let stdoutBuf = '';
+  let stderrBuf = '';
+
+  child.stdout?.on('data', (data: Buffer) => {
+    stdoutBuf += data.toString();
+  });
+
+  child.stderr?.on('data', (data: Buffer) => {
+    stderrBuf += data.toString();
+  });
+
+  child.on('close', () => {
+    const response = stdoutBuf.trim();
+    if (response) {
+      const outputMsg = addMessage(managed, 'output', response);
+      managed.outputBuffer.push(...response.split('\n'));
+      if (managed.outputBuffer.length > MAX_OUTPUT_LINES) {
+        managed.outputBuffer = managed.outputBuffer.slice(-MAX_OUTPUT_LINES);
+      }
+      session.lastOutput = response;
+      broadcastSessionOutput(session.id, outputMsg);
+    }
+
+    const stats = parseStderrStats(stderrBuf);
+    if (stats) {
+      const statsMsg = addMessage(managed, 'system', stats);
+      broadcastSessionOutput(session.id, statsMsg);
+    }
+
+    managed.busy = false;
+    managed.currentChild = undefined;
+    session.pid = undefined;
+  });
+
+  child.on('error', (err) => {
+    const errMsg = addMessage(managed, 'system', `Copilot error: ${err.message}`);
+    broadcastSessionOutput(session.id, errMsg);
+    managed.busy = false;
+    managed.currentChild = undefined;
+    session.pid = undefined;
+  });
+
+  return true;
 }
 
 export function stopSession(sessionId: string): Session | null {
   const managed = sessions.get(sessionId);
   if (!managed) return null;
 
-  const { session, process: child } = managed;
+  const { session } = managed;
 
   if (session.status === 'active' || session.status === 'starting') {
-    try {
-      child.kill();
-    } catch {
-      // Process may have already exited
+    if (session.type === 'copilot') {
+      // Kill the in-flight copilot -p child if one is running
+      if (managed.currentChild) {
+        try {
+          managed.currentChild.kill();
+        } catch {
+          // Child may have already exited
+        }
+        managed.currentChild = undefined;
+        managed.busy = false;
+      }
+    } else {
+      try {
+        managed.process.kill();
+      } catch {
+        // Process may have already exited
+      }
     }
     session.status = 'stopped';
+    session.pid = undefined;
     addMessage(managed, 'system', 'Session stopped by user');
     broadcastSessionStatus(session);
   }
@@ -214,10 +307,14 @@ export function sendInput(sessionId: string, text: string): boolean {
   if (!managed) return false;
   if (managed.session.status !== 'active') return false;
 
+  if (managed.session.type === 'copilot') {
+    return sendCopilotPrompt(managed, text);
+  }
+
+  // Shell session: write to stdin
   const { process: child } = managed;
   if (!child.stdin?.writable) return false;
 
-  // Ensure input ends with newline so commands execute
   const input = text.endsWith('\n') ? text : text + '\n';
   child.stdin.write(input);
   addMessage(managed, 'input', text);

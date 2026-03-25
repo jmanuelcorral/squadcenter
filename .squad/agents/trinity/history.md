@@ -103,3 +103,18 @@ Added first-class Copilot session support across the frontend (4 modified files 
 - Copilot glow animation is hover-only via inline JS style toggle (avoids constant animation fatigue)
 - Session type detection uses `session.type === 'copilot'` from backend response
 - Build: 304 KB JS + 51 KB CSS (~98 KB gzipped)
+
+### 2025-07-18 — Copilot Thinking/Busy State UX
+
+Added request-response UX for copilot sessions (3 modified files):
+
+- **SessionView.tsx:** Added `thinking` state — set to `true` on `handleSend` for copilot sessions, cleared to `false` when `session:output` WebSocket message arrives. Input disabled during thinking, placeholder switches to "Copilot is thinking..." while busy. Passes `thinking` prop to `SessionTerminal`
+- **SessionTerminal.tsx:** Added `thinking` prop — renders animated violet pulsing dots indicator ("✨ Copilot is thinking") at the bottom of the terminal, before the scroll anchor. Uses staggered `animate-[pulse]` with 0.2s delays per dot
+- **ChatInput.tsx:** Modified placeholder logic — when `disabled` AND a custom placeholder is provided, shows the custom placeholder instead of the generic "Session is not active" fallback
+- **Build:** 305 KB JS + 52 KB CSS (~98 KB gzipped)
+
+**Key decisions:**
+- Thinking state lives in SessionView (single source of truth) — flows down as props
+- Disabled input uses custom placeholder for contextual messaging ("Copilot is thinking..." vs "Session is not active")
+- Violet/purple colors maintained for all copilot-specific UI elements (dots, text, sparkle)
+- Pulsing dots use inline Tailwind arbitrary animation syntax — no new CSS keyframes needed

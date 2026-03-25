@@ -80,3 +80,17 @@
 - Existing `sendInput`, `stopSession`, output buffering, and WebSocket broadcasts all work unchanged for copilot sessions — same ManagedSession infrastructure
 - `project-status.ts` now includes `sessionType` in managed session responses
 - TypeScript compiles clean with zero errors across all modified files
+
+### 2025-07-18 — Rewrote copilot session to prompt-response pattern
+- **Problem:** Copilot CLI is a TUI app — `spawn('copilot', [])` with piped stdio produces zero output. It requires a real TTY.
+- **Solution:** `copilot -p "message"` works in non-interactive mode, producing stdout (response) + stderr (usage stats). Each invocation is one-shot request-response.
+- Rewrote `startCopilotSession()` to create a logical session with NO persistent process — just a session object in the Map marked active
+- `ManagedSession` now has `busy?: boolean` and `currentChild?: ChildProcess` fields for tracking in-flight prompts
+- New `sendCopilotPrompt()` function: spawns `cmd.exe /C "cd /d path && copilot -p \"msg\""` per prompt, collects all stdout/stderr into buffers, broadcasts output on close
+- `sendInput()` now dispatches to `sendCopilotPrompt()` for copilot sessions vs stdin-write for shell sessions
+- `stopSession()` kills the in-flight `currentChild` for copilot sessions instead of trying to kill a persistent process
+- Cross-platform: Windows uses `cmd.exe /C` wrapper, non-Windows uses `copilot -p` directly
+- `parseStderrStats()` extracts usage info (tokens, requests) from stderr for display
+- Busy-guard prevents concurrent prompts — returns false with a system message if a prompt is already executing
+- Shell sessions completely untouched — zero behavioral change for existing shell flow
+- TypeScript compiles clean with zero errors
