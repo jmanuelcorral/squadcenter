@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { registerAllHandlers } from './ipc/index.js';
@@ -16,6 +16,9 @@ export function getMainWindow(): BrowserWindow | null {
 }
 
 function createWindow(): void {
+  // Remove the default menu bar
+  Menu.setApplicationMenu(null);
+
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
