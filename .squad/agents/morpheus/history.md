@@ -21,3 +21,13 @@
 - All CRUD + import + team/decisions/logs/agent endpoints verified via curl
 - Monorepo workspace setup hoists deps to root `node_modules`; `tsconfig.json` uses `rootDir: ".."` to include `shared/types.ts`
 - WebSocket broadcasts on project-updated, notification, and agent-status-changed events
+
+### 2025-07-14 — Added filesystem browse API + fixed project import route
+- Created `server/src/routes/filesystem.ts` — `GET /api/filesystem/browse?path=` for directory browsing
+  - No-path defaults to Windows drive listing (via `wmic`) or `/` on Unix
+  - Returns only directories, filters hidden/system dirs, flags `.squad/` presence
+  - Sorts: `.squad/` folders first, then alphabetical
+- Mounted at `/api/filesystem` in `server/src/index.ts`
+- Added `POST /api/projects/import` route (no `:id` param) in `projects.ts` — declared before `/:id` routes to avoid Express param collision
+  - Validates `.squad/` exists at given path, parses project name from `team.md` blockquote, reads team members, creates new project entry
+- All three changes compile clean with zero TypeScript errors

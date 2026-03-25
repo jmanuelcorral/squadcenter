@@ -29,3 +29,17 @@ Built the complete React frontend (16 files across components, pages, hooks, lib
 - Used `useNotifications.tsx` (not `.ts`) because it contains JSX for the Provider component
 - TypeScript is hoisted to root `node_modules` in the workspace — `tsc` must be invoked from root `node_modules/.bin/`
 - Vite build produces ~266 KB JS + ~36 KB CSS gzipped to ~88 KB total
+
+### 2025-07-17 — Import Modal Folder Browser
+
+Replaced the plain text input in `ImportProjectModal.tsx` with a full visual folder browser:
+
+- **API layer:** Added `DirectoryEntry`, `BrowseResult` types and `browseFolders()` to `lib/api.ts` — calls `GET /api/filesystem/browse?path=`
+- **Breadcrumb navigation:** Clickable path segments with Home root button, handles both Windows (`D:\`) and Unix (`/`) paths
+- **Folder list:** Scrollable (`max-h-80`) entries with single-click select, double-click navigate-into, parent directory button
+- **Squad detection:** Folders with `.squad/` get emerald badge + ring highlight; import button turns emerald when selected
+- **Warning state:** Amber warning when selected folder lacks `.squad/`, still allows import
+- **Loading/error:** Skeleton rows while fetching, inline error display with AlertTriangle icon
+- **Preserved:** Existing success state (team members display) kept intact
+- **Icons:** Folder, FolderOpen, ChevronRight, ArrowUp, Home, Check, AlertTriangle, Loader2, HardDrive from lucide-react
+- **Build:** Vite production build passes cleanly (~272 KB JS + ~38 KB CSS)

@@ -55,6 +55,25 @@ export function fetchAgentDetails(projectId: string, agentName: string): Promise
   return request(`/projects/${projectId}/agents/${agentName}`);
 }
 
+// Filesystem browsing
+export interface DirectoryEntry {
+  name: string;
+  path: string;
+  isDirectory: boolean;
+  hasSquadFolder: boolean;
+}
+
+export interface BrowseResult {
+  currentPath: string;
+  parentPath: string | null;
+  entries: DirectoryEntry[];
+}
+
+export function browseFolders(path?: string): Promise<BrowseResult> {
+  const params = path ? `?path=${encodeURIComponent(path)}` : '';
+  return request(`/filesystem/browse${params}`);
+}
+
 // Notifications
 export function fetchNotifications(): Promise<Notification[]> {
   return request('/notifications');

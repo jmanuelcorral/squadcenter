@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import crypto from 'crypto';
+import fs from 'fs/promises';
+import path from 'path';
 import type { Project } from '../../../shared/types.js';
 import { loadProjects, saveProjects } from '../services/storage.js';
 import { readTeamFile } from '../services/squad-reader.js';
@@ -50,6 +52,68 @@ router.post('/', async (req, res) => {
   } catch (err) {
     console.error('Failed to create project:', err);
     res.status(500).json({ error: 'Failed to create project' });
+  }
+});
+
+// POST /api/projects/import — Import a project from a filesystem path
+router.post('/import', async (req, res) => {
+  try {
+    const { path: projectPath } = req.body;
+
+    if (!projectPath) {
+      res.status(400).json({ error: 'path is required' });
+      return;
+    }
+
+    const resolvedPath = path.resolve(projectPath);
+
+    // Verify .squad/ folder exists
+    const squadDir = path.join(resolvedPath, '.squad');
+    try {
+      await fs.access(squadDir);
+    } catch {
+      res.status(400).json({ error: '.squad/ folder not found at the given path' });
+      return;
+    }
+
+    // Try to parse project name from team.md
+    let projectName = path.basename(resolvedPath);
+    try {
+      const teamMd = await fs.readFile(path.join(squadDir, 'team.md'), 'utf-8');
+      // Look for "> projectName" line after the title
+      const quoteLine = teamMd.split('\n').find(line => line.trim().startsWith('> '));
+      if (quoteLine) {
+        const parsed = quoteLine.replace(/^>\s*/, '').trim();
+        if (parsed) projectName = parsed;
+      }
+    } catch {
+      // team.md not found or unreadable — use folder name
+    }
+
+    // Read team members
+    const team = await readTeamFile(resolvedPath);
+
+    const now = new Date().toISOString();
+    const project: Project = {
+      id: crypto.randomUUID(),
+      name: projectName,
+      path: resolvedPath,
+      description: '',
+      createdAt: now,
+      updatedAt: now,
+      team,
+      status: 'active',
+    };
+
+    const projects = await loadProjects();
+    projects.push(project);
+    await saveProjects(projects);
+
+    broadcast('project-updated', project);
+    res.status(201).json(project);
+  } catch (err) {
+    console.error('Failed to import project:', err);
+    res.status(500).json({ error: 'Failed to import project' });
   }
 });
 

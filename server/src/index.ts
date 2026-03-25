@@ -4,6 +4,7 @@ import { createServer } from 'http';
 import projectRoutes from './routes/projects.js';
 import squadRoutes from './routes/squad.js';
 import notificationRoutes from './routes/notifications.js';
+import filesystemRoutes from './routes/filesystem.js';
 import { initWebSocket } from './services/websocket.js';
 
 const app = express();
@@ -17,6 +18,7 @@ app.use(express.json());
 app.use('/api/projects', projectRoutes);
 app.use('/api/projects', squadRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/filesystem', filesystemRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {
