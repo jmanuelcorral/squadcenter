@@ -6,6 +6,11 @@
 - **Stack:** TypeScript, React 19, Vite, TailwindCSS, Node.js, Express
 - **Description:** Web app for orchestrating GitHub Copilot CLI sessions with Squad. Create/import projects, view chat, monitor agent status, notifications.
 
+## Team Context (2026-03-25 Initial Build)
+- **Trinity (Frontend):** Built complete React UI with 16 files, dark theme, WebSocket notifications
+- **Morpheus (Backend):** Implemented Express server with 12 API endpoints, WebSocket, JSON storage
+- **Decisions merged:** 3 architectural decisions documented and agreed upon
+
 ## Learnings
 
 - Existing repo had partial scaffolding (client/server dirs, some configs, shared types). Updated configs in-place rather than recreating.

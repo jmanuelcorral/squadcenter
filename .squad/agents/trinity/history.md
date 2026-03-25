@@ -6,6 +6,11 @@
 - **Stack:** React 19, TypeScript, Vite, TailwindCSS
 - **Description:** Frontend for a web app that orchestrates GitHub Copilot CLI sessions with Squad.
 
+## Team Context (2026-03-25 Initial Build)
+- **Neo (Lead):** Set up monorepo, shared types, Vite + Express proxy config
+- **Morpheus (Backend):** Implemented 12 API endpoints, WebSocket service
+- **Decisions merged:** 3 architectural decisions finalized
+
 ## Learnings
 
 ### 2026-03-25 — Full Frontend Build

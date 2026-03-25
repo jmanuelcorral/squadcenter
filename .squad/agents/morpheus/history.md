@@ -6,6 +6,11 @@
 - **Stack:** Node.js, Express, TypeScript, WebSocket
 - **Description:** Backend for a web app that orchestrates GitHub Copilot CLI sessions with Squad.
 
+## Team Context (2026-03-25 Initial Build)
+- **Neo (Lead):** Scaffolded monorepo structure, configs, shared types
+- **Trinity (Frontend):** Built React UI with WebSocket integration, notifications
+- **Decisions merged:** 3 architectural decisions finalized
+
 ## Learnings
 
 ### 2026-03-25 — Built full Express backend
