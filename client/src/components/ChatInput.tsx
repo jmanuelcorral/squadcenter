@@ -4,9 +4,10 @@ import { Send } from 'lucide-react';
 interface ChatInputProps {
   onSend: (text: string) => void;
   disabled?: boolean;
+  placeholder?: string;
 }
 
-export default function ChatInput({ onSend, disabled }: ChatInputProps) {
+export default function ChatInput({ onSend, disabled, placeholder }: ChatInputProps) {
   const [text, setText] = useState('');
   const [history, setHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
@@ -53,7 +54,7 @@ export default function ChatInput({ onSend, disabled }: ChatInputProps) {
           onChange={(e) => { setText(e.target.value); setHistoryIndex(-1); }}
           onKeyDown={handleKeyDown}
           disabled={disabled}
-          placeholder={disabled ? 'Session is not active' : 'Type a message or command…'}
+          placeholder={disabled ? 'Session is not active' : (placeholder ?? 'Type a message or command…')}
           className="flex-1 bg-transparent text-sm text-slate-200 placeholder:text-slate-600 outline-none font-mono disabled:cursor-not-allowed disabled:opacity-50"
         />
         <button

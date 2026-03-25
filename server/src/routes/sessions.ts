@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   startSession,
+  startCopilotSession,
   stopSession,
   sendInput,
   getSession,
@@ -27,19 +28,37 @@ router.get('/:id', (req, res) => {
   res.json({ ...session, messages });
 });
 
-// POST /api/sessions — start a new session
+// POST /api/sessions — start a new session (shell or copilot via optional `type` field)
 router.post('/', (req, res) => {
+  const { projectId, projectPath, type } = req.body;
+  if (!projectId || !projectPath) {
+    res.status(400).json({ error: 'projectId and projectPath are required' });
+    return;
+  }
+  try {
+    const session = type === 'copilot'
+      ? startCopilotSession(projectId, projectPath)
+      : startSession(projectId, projectPath);
+    res.status(201).json(session);
+  } catch (err: any) {
+    console.error('Failed to start session:', err);
+    res.status(500).json({ error: err.message || 'Failed to start session' });
+  }
+});
+
+// POST /api/sessions/copilot — start a Copilot CLI session (convenience endpoint)
+router.post('/copilot', (req, res) => {
   const { projectId, projectPath } = req.body;
   if (!projectId || !projectPath) {
     res.status(400).json({ error: 'projectId and projectPath are required' });
     return;
   }
   try {
-    const session = startSession(projectId, projectPath);
+    const session = startCopilotSession(projectId, projectPath);
     res.status(201).json(session);
   } catch (err: any) {
-    console.error('Failed to start session:', err);
-    res.status(500).json({ error: err.message || 'Failed to start session' });
+    console.error('Failed to start copilot session:', err);
+    res.status(500).json({ error: err.message || 'Failed to start copilot session' });
   }
 });
 

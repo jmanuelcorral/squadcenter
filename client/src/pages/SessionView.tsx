@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Square, Circle, Loader2, PanelRightOpen, PanelRightClose } from 'lucide-react';
+import { ArrowLeft, Square, Circle, Loader2, PanelRightOpen, PanelRightClose, Sparkles } from 'lucide-react';
 import { getSession, stopSession, sendSessionInput } from '../lib/api';
 import type { Session, SessionMessage } from '../lib/api';
 import { useWebSocket } from '../hooks/useWebSocket';
@@ -136,12 +136,13 @@ export default function SessionView() {
   }
 
   const isActive = session.status === 'active' || session.status === 'starting';
+  const isCopilot = session.type === 'copilot';
   const statusClass = statusColors[session.status] ?? statusColors.stopped;
 
   return (
     <div className="flex h-[calc(100vh)] flex-col">
       {/* Header */}
-      <header className="flex items-center justify-between border-b border-white/5 bg-slate-900/80 backdrop-blur px-5 py-3">
+      <header className={`flex items-center justify-between border-b bg-slate-900/80 backdrop-blur px-5 py-3 ${isCopilot ? 'border-violet-500/20' : 'border-white/5'}`}>
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate(-1)}
@@ -154,12 +155,18 @@ export default function SessionView() {
 
           <div>
             <div className="flex items-center gap-2">
+              {isCopilot && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-violet-500/15 to-purple-600/15 px-2 py-0.5 text-[10px] font-semibold text-violet-300 ring-1 ring-violet-500/25">
+                  <Sparkles className="w-3 h-3" />
+                  Copilot
+                </span>
+              )}
               <h1 className="text-sm font-semibold text-white truncate max-w-xs">
                 {session.projectPath.split(/[/\\]/).pop() ?? 'Session'}
               </h1>
               <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ${statusClass}`}>
                 {session.status === 'active' && (
-                  <Circle className="w-1.5 h-1.5 fill-emerald-400 text-emerald-400 animate-pulse-dot" />
+                  <Circle className={`w-1.5 h-1.5 fill-current animate-pulse-dot ${isCopilot ? 'text-violet-400' : 'text-emerald-400'}`} />
                 )}
                 {session.status}
               </span>
@@ -208,7 +215,11 @@ export default function SessionView() {
           <SessionTerminal messages={messages} />
 
           {/* Input */}
-          <ChatInput onSend={handleSend} disabled={!isActive} />
+          <ChatInput
+            onSend={handleSend}
+            disabled={!isActive}
+            placeholder={isCopilot ? 'Ask Copilot...' : undefined}
+          />
         </div>
 
         {/* Right: Activity Timeline (collapsible) */}

@@ -39,6 +39,7 @@ export interface Session {
   id: string;
   projectId: string;
   projectPath: string;
+  type: 'shell' | 'copilot';
   status: 'starting' | 'active' | 'stopped' | 'error';
   startedAt: string;
   pid?: number;
@@ -58,6 +59,7 @@ export interface ProjectStatus {
   managed: boolean;
   pid?: number;
   sessionId?: string;
+  sessionType?: 'shell' | 'copilot';
   hookDetected?: boolean;
 }
 

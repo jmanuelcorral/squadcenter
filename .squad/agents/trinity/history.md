@@ -85,3 +85,21 @@ Built the Copilot CLI hooks monitoring layer (2 new components, 4 modified files
 - ActivityTimeline accepts `compact` prop for different contexts (full filters in ProjectView, minimal in SessionView sidebar)
 - ProjectCard fetches hook events independently (same pattern as status — cheap API calls)
 - Active session detection from hooks is client-side logic: latest sessionStart > latest sessionEnd
+
+### 2025-07-18 — Copilot Session UI (Start/Stop)
+
+Added first-class Copilot session support across the frontend (4 modified files + CSS):
+
+- **API layer (`lib/api.ts`):** Added `type?: 'shell' | 'copilot'` to `Session` interface, added `startCopilotSession()` function that passes `type: 'copilot'` to `POST /api/sessions`
+- **ChatInput.tsx:** Added optional `placeholder` prop — defaults to existing "Type a message or command…" but allows override (used for "Ask Copilot…")
+- **ProjectCard.tsx:** Added prominent "Start Copilot" button as the main CTA — full-width purple gradient (`from-violet-500 to-purple-600`), Sparkles icon. When active: shows "Open Copilot" + "Stop" button pair. Shell session button demoted to secondary (smaller, bottom-right). Added `handleCopilotStart` and `handleCopilotStop` handlers with loading/stopping states
+- **SessionView.tsx:** Copilot sessions get a violet "Copilot" badge with Sparkles icon in header, purple border accent, violet pulse dot instead of emerald, and "Ask Copilot…" placeholder in ChatInput
+- **ProjectView.tsx:** Added "Start Copilot" button in project header (same purple gradient style), fetches `getProjectStatus` on mount. When running: shows "Open Copilot" with pulsing violet dot + "Stop" button
+- **index.css:** Added `copilot-glow` keyframe animation (violet box-shadow pulse) for hover effect on Start Copilot button
+
+**Key decisions:**
+- Copilot button is the most prominent CTA (full-width, gradient, large) — shell session is secondary/small
+- Purple/violet color family (`violet-500`, `purple-600`) distinguishes copilot from shell (emerald)
+- Copilot glow animation is hover-only via inline JS style toggle (avoids constant animation fatigue)
+- Session type detection uses `session.type === 'copilot'` from backend response
+- Build: 304 KB JS + 51 KB CSS (~98 KB gzipped)

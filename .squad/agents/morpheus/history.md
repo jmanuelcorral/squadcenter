@@ -70,3 +70,13 @@
 - Extended WebSocket EventType with `hook:event`
 - Enhanced project-status.ts — checks hook event store for active sessions before falling back to process detection
 - All routes mounted in index.ts; TypeScript compiles clean with zero errors
+
+### 2025-07-18 — Added Copilot CLI session type
+- Extended `Session` interface with `type: 'shell' | 'copilot'` field (required, no optional — clean contract)
+- Added `sessionType?: 'shell' | 'copilot'` to `ProjectStatus` for status endpoint reporting
+- Refactored `session-manager.ts`: extracted `attachProcessHandlers()` and `findActiveSessionForProject()` helpers to eliminate duplication between shell and copilot spawn paths
+- New `startCopilotSession(projectId, projectPath)` spawns `copilot` with `shell: true` on Windows for PATH resolution
+- Two ways to start copilot sessions: `POST /api/sessions` with `{ type: 'copilot' }` body field, or dedicated `POST /api/sessions/copilot` convenience endpoint
+- Existing `sendInput`, `stopSession`, output buffering, and WebSocket broadcasts all work unchanged for copilot sessions — same ManagedSession infrastructure
+- `project-status.ts` now includes `sessionType` in managed session responses
+- TypeScript compiles clean with zero errors across all modified files

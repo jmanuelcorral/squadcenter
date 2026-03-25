@@ -47,52 +47,9 @@ function addMessage(
   return msg;
 }
 
-export function startSession(projectId: string, projectPath: string): Session {
-  // Check if there's already an active session for this project
-  for (const [, managed] of sessions) {
-    if (
-      managed.session.projectId === projectId &&
-      (managed.session.status === 'active' || managed.session.status === 'starting')
-    ) {
-      return managed.session;
-    }
-  }
-
-  const id = crypto.randomUUID();
-  const session: Session = {
-    id,
-    projectId,
-    projectPath,
-    status: 'starting',
-    startedAt: new Date().toISOString(),
-  };
-
-  const isWindows = process.platform === 'win32';
-  const shellCmd = isWindows ? 'cmd.exe' : '/bin/bash';
-  const shellArgs = isWindows ? ['/K', `cd /d "${projectPath}"`] : [];
-
-  const child = spawn(shellCmd, shellArgs, {
-    cwd: projectPath,
-    shell: false,
-    stdio: ['pipe', 'pipe', 'pipe'],
-    env: { ...process.env },
-    windowsHide: true,
-  });
-
-  const managed: ManagedSession = {
-    session,
-    process: child,
-    outputBuffer: [],
-    messages: [],
-  };
-
-  sessions.set(id, managed);
-
-  session.pid = child.pid;
-  session.status = 'active';
-
-  addMessage(managed, 'system', `Session started in ${projectPath}`);
-  broadcastSessionStatus(session);
+function attachProcessHandlers(managed: ManagedSession): void {
+  const { session, process: child } = managed;
+  const id = session.id;
 
   child.stdout?.on('data', (data: Buffer) => {
     const text = data.toString();
@@ -130,6 +87,104 @@ export function startSession(projectId: string, projectPath: string): Session {
     addMessage(managed, 'system', `Error: ${err.message}`);
     broadcastSessionStatus(session);
   });
+}
+
+function findActiveSessionForProject(projectId: string): Session | undefined {
+  for (const [, managed] of sessions) {
+    if (
+      managed.session.projectId === projectId &&
+      (managed.session.status === 'active' || managed.session.status === 'starting')
+    ) {
+      return managed.session;
+    }
+  }
+  return undefined;
+}
+
+export function startSession(projectId: string, projectPath: string): Session {
+  const existing = findActiveSessionForProject(projectId);
+  if (existing) return existing;
+
+  const id = crypto.randomUUID();
+  const session: Session = {
+    id,
+    projectId,
+    projectPath,
+    type: 'shell',
+    status: 'starting',
+    startedAt: new Date().toISOString(),
+  };
+
+  const isWindows = process.platform === 'win32';
+  const shellCmd = isWindows ? 'cmd.exe' : '/bin/bash';
+  const shellArgs = isWindows ? ['/K', `cd /d "${projectPath}"`] : [];
+
+  const child = spawn(shellCmd, shellArgs, {
+    cwd: projectPath,
+    shell: false,
+    stdio: ['pipe', 'pipe', 'pipe'],
+    env: { ...process.env },
+    windowsHide: true,
+  });
+
+  const managed: ManagedSession = {
+    session,
+    process: child,
+    outputBuffer: [],
+    messages: [],
+  };
+
+  sessions.set(id, managed);
+
+  session.pid = child.pid;
+  session.status = 'active';
+
+  addMessage(managed, 'system', `Shell session started in ${projectPath}`);
+  broadcastSessionStatus(session);
+  attachProcessHandlers(managed);
+
+  return session;
+}
+
+export function startCopilotSession(projectId: string, projectPath: string): Session {
+  const existing = findActiveSessionForProject(projectId);
+  if (existing) return existing;
+
+  const id = crypto.randomUUID();
+  const session: Session = {
+    id,
+    projectId,
+    projectPath,
+    type: 'copilot',
+    status: 'starting',
+    startedAt: new Date().toISOString(),
+  };
+
+  const isWindows = process.platform === 'win32';
+
+  const child = spawn('copilot', [], {
+    cwd: projectPath,
+    shell: isWindows,
+    stdio: ['pipe', 'pipe', 'pipe'],
+    env: { ...process.env },
+    windowsHide: true,
+  });
+
+  const managed: ManagedSession = {
+    session,
+    process: child,
+    outputBuffer: [],
+    messages: [],
+  };
+
+  sessions.set(id, managed);
+
+  session.pid = child.pid;
+  session.status = 'active';
+
+  addMessage(managed, 'system', `Copilot session started in ${projectPath}`);
+  broadcastSessionStatus(session);
+  attachProcessHandlers(managed);
 
   return session;
 }
@@ -186,15 +241,7 @@ export function listSessions(): Session[] {
 }
 
 export function findSessionByProject(projectId: string): Session | undefined {
-  for (const [, managed] of sessions) {
-    if (
-      managed.session.projectId === projectId &&
-      (managed.session.status === 'active' || managed.session.status === 'starting')
-    ) {
-      return managed.session;
-    }
-  }
-  return undefined;
+  return findActiveSessionForProject(projectId);
 }
 
 export function cleanupSessions(): void {

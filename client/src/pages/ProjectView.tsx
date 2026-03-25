@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Users, Activity, Trash2, Radio } from 'lucide-react';
-import { fetchProject, fetchTeam, fetchLogs, deleteProject, getHookEvents } from '../lib/api';
+import { ChevronLeft, Users, Activity, Trash2, Radio, Sparkles, Loader2, Square } from 'lucide-react';
+import { fetchProject, fetchTeam, fetchLogs, deleteProject, getHookEvents, startCopilotSession, stopSession, getProjectStatus } from '../lib/api';
 import type { Project, TeamMember, ChatMessage } from '@shared/types';
-import type { HookEvent } from '../lib/api';
+import type { HookEvent, ProjectStatus } from '../lib/api';
 import TeamPanel from '../components/TeamPanel';
 import ActivityFeed from '../components/ActivityFeed';
 import ActivityTimeline from '../components/ActivityTimeline';
@@ -19,6 +19,9 @@ export default function ProjectView() {
   const [activeTab, setActiveTab] = useState<'activity' | 'team' | 'monitoring'>('activity');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [hookEventCount, setHookEventCount] = useState(0);
+  const [copilotStatus, setCopilotStatus] = useState<ProjectStatus | null>(null);
+  const [launchingCopilot, setLaunchingCopilot] = useState(false);
+  const [stoppingCopilot, setStoppingCopilot] = useState(false);
   const feedRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -28,11 +31,13 @@ export default function ProjectView() {
       fetchTeam(id).catch(() => [] as TeamMember[]),
       fetchLogs(id).catch(() => [] as ChatMessage[]),
       getHookEvents(id, 10).catch(() => [] as HookEvent[]),
-    ]).then(([proj, tm, lg, hookEvts]) => {
+      getProjectStatus(id).catch(() => null as ProjectStatus | null),
+    ]).then(([proj, tm, lg, hookEvts, projStatus]) => {
       setProject(proj);
       setTeam(tm);
       setLogs(lg);
       setHookEventCount(hookEvts.length);
+      setCopilotStatus(projStatus);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, [id]);
@@ -51,6 +56,31 @@ export default function ProjectView() {
       navigate('/');
     } catch {
       // ignore
+    }
+  }
+
+  async function handleCopilotStart() {
+    if (!id || !project) return;
+    setLaunchingCopilot(true);
+    try {
+      const session = await startCopilotSession(id, project.path);
+      navigate(`/sessions/${session.id}`);
+    } catch {
+      setLaunchingCopilot(false);
+    }
+  }
+
+  async function handleCopilotStop() {
+    if (!id || !copilotStatus?.sessionId) return;
+    setStoppingCopilot(true);
+    try {
+      await stopSession(copilotStatus.sessionId);
+      const refreshed = await getProjectStatus(id);
+      setCopilotStatus(refreshed);
+    } catch {
+      // ignore
+    } finally {
+      setStoppingCopilot(false);
     }
   }
 
@@ -109,6 +139,48 @@ export default function ProjectView() {
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Copilot CTA */}
+          {copilotStatus?.active && copilotStatus.sessionId ? (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => navigate(`/sessions/${copilotStatus.sessionId}`)}
+                className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-violet-500/20 to-purple-600/20 px-4 py-2 text-sm font-medium text-violet-300 ring-1 ring-violet-500/30 hover:from-violet-500/30 hover:to-purple-600/30 transition-all"
+              >
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75 animate-ping" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-violet-500" />
+                </span>
+                <Sparkles className="w-4 h-4" />
+                Open Copilot
+              </button>
+              <button
+                onClick={handleCopilotStop}
+                disabled={stoppingCopilot}
+                className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-red-400 ring-1 ring-red-500/20 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                title="Stop Copilot"
+              >
+                {stoppingCopilot ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Square className="w-3.5 h-3.5" />
+                )}
+                Stop
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={handleCopilotStart}
+              disabled={launchingCopilot}
+              className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-violet-500 to-purple-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-500/20 hover:from-violet-400 hover:to-purple-500 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {launchingCopilot ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Sparkles className="w-4 h-4" />
+              )}
+              Start Copilot
+            </button>
+          )}
           <SetupHooksButton projectId={id!} />
           <button
             onClick={() => setShowDeleteConfirm(true)}

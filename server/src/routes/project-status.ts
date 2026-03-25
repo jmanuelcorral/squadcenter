@@ -20,6 +20,7 @@ router.get('/:projectId/status', async (req, res) => {
       managed: true,
       pid: managedSession.pid,
       sessionId: managedSession.id,
+      sessionType: managedSession.type,
     };
     res.json(status);
     return;

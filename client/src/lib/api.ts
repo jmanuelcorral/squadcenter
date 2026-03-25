@@ -8,6 +8,7 @@ export interface Session {
   projectId: string;
   projectPath: string;
   status: 'starting' | 'active' | 'stopped' | 'error';
+  type?: 'shell' | 'copilot';
   startedAt: string;
   pid?: number;
   lastOutput?: string;
@@ -25,6 +26,8 @@ export interface ProjectStatus {
   active: boolean;
   managed: boolean;
   sessionId?: string;
+  sessionType?: 'shell' | 'copilot';
+  hookDetected?: boolean;
 }
 
 const API_BASE = '/api';
@@ -123,6 +126,10 @@ export function getSession(id: string): Promise<Session & { messages: SessionMes
 
 export function startSession(projectId: string, projectPath: string): Promise<Session> {
   return request('/sessions', { method: 'POST', body: JSON.stringify({ projectId, projectPath }) });
+}
+
+export function startCopilotSession(projectId: string, projectPath: string): Promise<Session> {
+  return request('/sessions', { method: 'POST', body: JSON.stringify({ projectId, projectPath, type: 'copilot' }) });
 }
 
 export function stopSession(id: string): Promise<{ success: true }> {

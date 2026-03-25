@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Play, Terminal, Loader2, Clock } from 'lucide-react';
+import { Play, Terminal, Loader2, Clock, Sparkles, Square } from 'lucide-react';
 import type { Project } from '@shared/types';
-import { getProjectStatus, startSession, getHookEvents } from '../lib/api';
+import { getProjectStatus, startSession, startCopilotSession, stopSession, getHookEvents } from '../lib/api';
 import type { ProjectStatus, HookEvent } from '../lib/api';
 import SetupHooksButton from './SetupHooksButton';
 
@@ -20,6 +20,8 @@ export default function ProjectCard({ project }: { project: Project }) {
   const navigate = useNavigate();
   const [status, setStatus] = useState<ProjectStatus | null>(null);
   const [launching, setLaunching] = useState(false);
+  const [launchingCopilot, setLaunchingCopilot] = useState(false);
+  const [stoppingCopilot, setStoppingCopilot] = useState(false);
   const [hookEvents, setHookEvents] = useState<HookEvent[]>([]);
 
   useEffect(() => {
@@ -58,6 +60,32 @@ export default function ProjectCard({ project }: { project: Project }) {
       } finally {
         setLaunching(false);
       }
+    }
+  }
+
+  async function handleCopilotStart(e: React.MouseEvent) {
+    e.stopPropagation();
+    setLaunchingCopilot(true);
+    try {
+      const session = await startCopilotSession(project.id, project.path);
+      navigate(`/sessions/${session.id}`);
+    } catch {
+      setLaunchingCopilot(false);
+    }
+  }
+
+  async function handleCopilotStop(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!status?.sessionId) return;
+    setStoppingCopilot(true);
+    try {
+      await stopSession(status.sessionId);
+      const refreshed = await getProjectStatus(project.id);
+      setStatus(refreshed);
+    } catch {
+      // ignore
+    } finally {
+      setStoppingCopilot(false);
     }
   }
 
@@ -133,7 +161,51 @@ export default function ProjectCard({ project }: { project: Project }) {
         </div>
       )}
 
-      {/* Footer: time + hook info + session action */}
+      {/* Copilot action — the main CTA */}
+      <div className="mt-4">
+        {isActive && status?.sessionId ? (
+          <div className="flex gap-2">
+            <button
+              onClick={(e) => { e.stopPropagation(); navigate(`/sessions/${status.sessionId}`); }}
+              className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-violet-500/20 to-purple-600/20 px-3 py-2 text-sm font-medium text-violet-300 ring-1 ring-violet-500/30 hover:from-violet-500/30 hover:to-purple-600/30 transition-all"
+            >
+              <Sparkles className="w-4 h-4" />
+              Open Copilot
+            </button>
+            <button
+              onClick={handleCopilotStop}
+              disabled={stoppingCopilot}
+              className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-red-400 ring-1 ring-red-500/20 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+              title="Stop Copilot"
+            >
+              {stoppingCopilot ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Square className="w-3.5 h-3.5" />
+              )}
+              Stop
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={handleCopilotStart}
+            disabled={launchingCopilot}
+            className="w-full flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-violet-500 to-purple-600 px-3 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-500/20 hover:from-violet-400 hover:to-purple-500 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed animate-[copilot-glow_3s_ease-in-out_infinite]"
+            style={{ animationName: 'none' }}
+            onMouseEnter={(e) => { (e.target as HTMLElement).style.animationName = 'copilot-glow'; }}
+            onMouseLeave={(e) => { (e.target as HTMLElement).style.animationName = 'none'; }}
+          >
+            {launchingCopilot ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Sparkles className="w-4 h-4" />
+            )}
+            Start Copilot
+          </button>
+        )}
+      </div>
+
+      {/* Footer: time + hook info + shell session */}
       <div className="mt-3 flex items-center justify-between gap-2">
         <div className="flex flex-col gap-0.5">
           <p className="text-[11px] text-slate-500">
@@ -160,7 +232,7 @@ export default function ProjectCard({ project }: { project: Project }) {
             ) : (
               <Terminal className="w-3 h-3" />
             )}
-            Enter Session
+            Enter Shell
           </button>
         ) : (
           <button
@@ -172,7 +244,7 @@ export default function ProjectCard({ project }: { project: Project }) {
             ) : (
               <Play className="w-3 h-3" />
             )}
-            Launch Session
+            Shell Session
           </button>
         )}
       </div>
