@@ -118,3 +118,24 @@ Added request-response UX for copilot sessions (3 modified files):
 - Disabled input uses custom placeholder for contextual messaging ("Copilot is thinking..." vs "Session is not active")
 - Violet/purple colors maintained for all copilot-specific UI elements (dots, text, sparkle)
 - Pulsing dots use inline Tailwind arbitrary animation syntax — no new CSS keyframes needed
+
+### 2025-07-18 — Electron IPC Renderer Migration
+
+Migrated the entire React frontend from `client/src/` to `src/` and rewired all API calls for Electron IPC:
+
+- **Root `index.html`:** Copied from `client/index.html` with `<script src="/src/main.tsx">` for Vite root resolution
+- **`src/types/electron.d.ts`:** TypeScript declaration for `window.electronAPI` — `invoke`, `on`, `off`, `removeAllListeners`
+- **`src/lib/api.ts`:** Replaced `fetch()`-based `request()` helper with 23 IPC invoke calls via `window.electronAPI.invoke()`. Removed `API_BASE`, `request<T>()`, all `fetch()` usage. Kept all type exports (`Session`, `SessionMessage`, `ProjectStatus`, `DirectoryEntry`, `BrowseResult`, `HookEvent`, `HookEventType`)
+- **`src/hooks/useIpcEvents.ts`:** Replaces `useWebSocket.ts` — subscribes to 5 IPC event channels (`event:project-updated`, `event:notification`, `event:session:output`, `event:session:status`, `event:hook:event`). Returns `{ messages, connected, send, clearMessages }` for API compatibility. `connected` is always `true` in Electron
+- **`src/hooks/useNotifications.tsx`:** Updated import from `useWebSocket` → `useIpcEvents`
+- **`src/components/ActivityTimeline.tsx`:** Updated import from `useWebSocket` → `useIpcEvents`
+- **`src/pages/SessionView.tsx`:** Updated import from `useWebSocket` → `useIpcEvents`, changed WS message ID prefix from `ws-` to `ipc-`
+- **`src/App.tsx`:** Changed `BrowserRouter` → `HashRouter` (required for Electron `file://` protocol)
+- **All other files:** Direct copies from `client/src/` preserving exact structure and behavior
+
+**Key decisions:**
+- HashRouter chosen over MemoryRouter for URL visibility in dev tools and deep-link-like behavior
+- `useIpcEvents` preserves the same `{ messages, connected, send, clearMessages }` return shape as `useWebSocket` for minimal downstream changes
+- IPC channel naming uses colon-separated namespaces matching main process handlers (`projects:list`, `sessions:create`, etc.)
+- Old `client/` directory left untouched — cleanup is a separate task
+- No changes to `package.json` or `vite.config.ts` — Morpheus handles build config

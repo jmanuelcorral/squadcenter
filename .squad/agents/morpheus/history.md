@@ -94,3 +94,18 @@
 - Busy-guard prevents concurrent prompts — returns false with a system message if a prompt is already executing
 - Shell sessions completely untouched — zero behavioral change for existing shell flow
 - TypeScript compiles clean with zero errors
+
+### 2025-07-18 — Migrated Express+WebSocket server to Electron main process
+- Created full `electron/` directory with main.ts, preload.ts, hooks-server.ts
+- **Services migrated:** storage.ts (dynamic data dir via `setDataDir()`), session-manager.ts (broadcast via event-bridge instead of websocket), squad-reader.ts, hooks-generator.ts, hook-event-store.ts — all copied with updated imports
+- **New event-bridge.ts** replaces websocket.ts — uses `BrowserWindow.webContents.send()` instead of WebSocket broadcast; `setBrowserWindow()` sets the target window from main.ts
+- **IPC handlers:** 6 modules in `electron/ipc/` — projects.ts (11 handlers inc. status, team, decisions, logs, agent, setupHooks), sessions.ts (6 handlers), filesystem.ts, notifications.ts, hooks.ts, index.ts barrel
+- **hooks-server.ts:** Minimal Node `http.createServer` on port 3001 for Copilot CLI hook POSTs — no Express dependency
+- **Preload script:** contextBridge exposes `electronAPI` with invoke/on/off/removeAllListeners
+- **main.ts:** app.whenReady → BrowserWindow (1400×900, dark bg #0f172a), loads Vite dev server URL or dist/index.html, registers IPC handlers, starts hooks server
+- **Data directory:** Moved `server/data/` to root `data/`; storage.ts uses `app.isPackaged ? app.getPath('userData') : process.cwd()` + `/data`
+- **Root configs:** New unified package.json (no workspaces, merged deps, removed express/cors/ws/concurrently), vite.config.ts with vite-plugin-electron, tsconfig.json (renderer), tsconfig.node.json (electron)
+- **shared/ipc-channels.ts:** Type-safe channel name constants for both processes
+- IPC contract matches the agreed spec exactly — same data shapes as Express routes
+- Did NOT delete server/ or client/ directories — cleanup is a separate step
+- Did NOT modify client/src/ — that's Trinity's domain
