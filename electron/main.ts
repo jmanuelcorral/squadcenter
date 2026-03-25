@@ -1,9 +1,13 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { registerAllHandlers } from './ipc/index.js';
 import { setBrowserWindow } from './services/event-bridge.js';
 import { setDataDir } from './services/storage.js';
 import { startHooksServer, stopHooksServer } from './hooks-server.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 let mainWindow: BrowserWindow | null = null;
 
