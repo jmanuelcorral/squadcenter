@@ -163,6 +163,10 @@ export async function parseAgentActivity(eventsPath: string): Promise<AgentActiv
     const toolCallMap = new Map<string, AgentToolCall>();
     const subagentMap = new Map<string, SubagentSpawn>();
     const activeTurns = new Set<string>();
+    // Maps background agent_id → original toolCallId for tracking via read_agent
+    const bgAgentIdToToolCall = new Map<string, string>();
+    // Track which subagents are background (don't mark complete on immediate return)
+    const backgroundToolCalls = new Set<string>();
     let lastTurnStart: string | undefined;
     let agentName: string | undefined;
 
@@ -203,6 +207,7 @@ export async function parseAgentActivity(eventsPath: string): Promise<AgentActiv
             toolCallMap.set(toolCallId, tc);
 
             if (toolName === 'task') {
+              const isBackground = args.mode === 'background';
               const spawn: SubagentSpawn = {
                 id: toolCallId,
                 name: args.name ?? '',
@@ -212,6 +217,21 @@ export async function parseAgentActivity(eventsPath: string): Promise<AgentActiv
                 startTime: ts,
               };
               subagentMap.set(toolCallId, spawn);
+              if (isBackground) {
+                backgroundToolCalls.add(toolCallId);
+              }
+            }
+
+            // Track read_agent calls — link to the original background subagent
+            if (toolName === 'read_agent' && args.agent_id) {
+              const originalToolCallId = bgAgentIdToToolCall.get(args.agent_id);
+              if (originalToolCallId) {
+                // Mark that we're still tracking this agent
+                const sub = subagentMap.get(originalToolCallId);
+                if (sub && sub.status === 'running') {
+                  // Still running — keep it alive
+                }
+              }
             }
             break;
           }
@@ -225,6 +245,56 @@ export async function parseAgentActivity(eventsPath: string): Promise<AgentActiv
               ? truncate(resultContent, 500)
               : truncate(JSON.stringify(resultContent), 500);
 
+            // Check if this is a background task completing with "Agent started in background"
+            const isBackgroundLaunch = backgroundToolCalls.has(toolCallId)
+              && typeof resultStr === 'string'
+              && resultStr.includes('Agent started in background');
+
+            if (isBackgroundLaunch) {
+              // Extract agent_id from result: "Agent started in background with agent_id: {id}"
+              const agentIdMatch = resultStr.match(/agent_id:\s*(\S+)/);
+              if (agentIdMatch) {
+                bgAgentIdToToolCall.set(agentIdMatch[1].replace(/[.,]$/, ''), toolCallId);
+              }
+              // DON'T mark the subagent as completed — it's still running in background
+              break;
+            }
+
+            // Check if this is a read_agent completion — update the tracked subagent
+            const startTc = toolCallMap.get(toolCallId);
+            if (startTc?.toolName === 'read_agent') {
+              const agentIdArg = startTc.arguments?.agent_id;
+              if (agentIdArg) {
+                const originalId = bgAgentIdToToolCall.get(agentIdArg);
+                if (originalId) {
+                  const sub = subagentMap.get(originalId);
+                  if (sub) {
+                    // Check if the agent has completed
+                    const isCompleted = resultStr.includes('status: completed')
+                      || resultStr.includes('status: failed')
+                      || resultStr.includes('status: cancelled');
+                    const isFailed = resultStr.includes('status: failed')
+                      || resultStr.includes('status: cancelled');
+                    if (isCompleted) {
+                      sub.status = isFailed ? 'failed' : 'completed';
+                      sub.endTime = ts;
+                      sub.result = truncate(resultStr, 500);
+                    }
+                    // If still running, keep status as 'running'
+                  }
+                }
+              }
+              // Update the read_agent tool call itself
+              if (startTc) {
+                startTc.status = success ? 'completed' : 'failed';
+                startTc.endTime = ts;
+                startTc.result = resultStr;
+                startTc.model = event.data?.model;
+              }
+              break;
+            }
+
+            // Normal (non-background) tool completion
             const existing = toolCallMap.get(toolCallId);
             if (existing) {
               existing.status = success ? 'completed' : 'failed';
