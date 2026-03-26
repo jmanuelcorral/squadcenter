@@ -4,6 +4,7 @@ import * as pty from 'node-pty';
 import type { Session, SessionMessage } from '../../shared/types.js';
 import { broadcast } from './event-bridge.js';
 import { detectAzureAccount, detectMcpServers, type AzureAccount, type McpServer } from './environment-info.js';
+import { watchCopilotSession, type CopilotSessionStats } from './copilot-log-watcher.js';
 
 const MAX_OUTPUT_LINES = 500;
 
@@ -12,11 +13,13 @@ export interface SessionStats {
   tokensOut: number;
   tokensTotal: number;
   premiumRequests: number;
+  turns: number;
+  toolCalls: number;
   lastUpdated: string;
 }
 
 function createEmptyStats(): SessionStats {
-  return { tokensIn: 0, tokensOut: 0, tokensTotal: 0, premiumRequests: 0, lastUpdated: '' };
+  return { tokensIn: 0, tokensOut: 0, tokensTotal: 0, premiumRequests: 0, turns: 0, toolCalls: 0, lastUpdated: '' };
 }
 
 interface ManagedSession {
@@ -28,6 +31,7 @@ interface ManagedSession {
   stats: SessionStats;
   azureAccount?: AzureAccount | null;
   mcpServers?: McpServer[];
+  logWatcher?: { stop: () => void };
 }
 
 const sessions = new Map<string, ManagedSession>();
@@ -205,17 +209,8 @@ export async function startCopilotSession(projectId: string, projectPath: string
 
   sessions.set(id, managed);
 
-  let lineBuffer = '';
   ptyProcess.onData((data: string) => {
     broadcast('session:ptyData', { sessionId: id, data });
-
-    // Buffer partial lines and parse complete ones for stats
-    lineBuffer += data;
-    const lines = lineBuffer.split('\n');
-    lineBuffer = lines.pop() ?? '';
-    for (const line of lines) {
-      parseStatsLine(managed, line, id);
-    }
   });
 
   ptyProcess.onExit(() => {
@@ -230,6 +225,21 @@ export async function startCopilotSession(projectId: string, projectPath: string
 
   addMessage(managed, 'system', 'Copilot session started');
   broadcastSessionStatus(session);
+
+  // Start watching copilot session logs for real stats
+  const logWatcher = watchCopilotSession(projectPath, (copilotStats) => {
+    managed.stats = {
+      tokensIn: 0,
+      tokensOut: copilotStats.outputTokens,
+      tokensTotal: copilotStats.outputTokens,
+      premiumRequests: copilotStats.premiumRequests,
+      turns: copilotStats.turns,
+      toolCalls: copilotStats.toolCalls,
+      lastUpdated: copilotStats.lastUpdated,
+    };
+    broadcast('session:stats', { sessionId: id, stats: managed.stats });
+  });
+  managed.logWatcher = logWatcher;
 
   return session;
 }
@@ -257,6 +267,9 @@ export function stopSession(sessionId: string): Session | null {
           // PTY may have already exited
         }
       }
+      if (managed.logWatcher) {
+        managed.logWatcher.stop();
+      }
     } else {
       try {
         managed.process.kill();
@@ -281,12 +294,6 @@ export function sendInput(sessionId: string, text: string): boolean {
   if (managed.session.type === 'copilot') {
     if (!managed.pty) return false;
     managed.pty.write(text);
-    // Count Enter keypresses as premium requests (user submitted a prompt)
-    if (text.includes('\r') || text.includes('\n')) {
-      managed.stats.premiumRequests++;
-      managed.stats.lastUpdated = new Date().toISOString();
-      broadcast('session:stats', { sessionId, stats: managed.stats });
-    }
     return true;
   }
 
@@ -322,6 +329,9 @@ export function findSessionByProject(projectId: string): Session | undefined {
 export function cleanupSessions(): void {
   for (const [id, managed] of sessions) {
     if (managed.session.status === 'stopped' || managed.session.status === 'error') {
+      if (managed.logWatcher) {
+        managed.logWatcher.stop();
+      }
       sessions.delete(id);
     }
   }
@@ -337,74 +347,4 @@ export function getSessionAzureAccount(sessionId: string): AzureAccount | null {
 
 export function getSessionMcpServers(sessionId: string): McpServer[] {
   return sessions.get(sessionId)?.mcpServers ?? [];
-}
-
-// Strip ANSI escape codes for clean text parsing (CSI, OSC, charset, mode, kitty, 8-bit CSI)
-const ANSI_RE = /\x1b\[[0-9;?]*[A-Za-z]|\x1b\][^\x07]*(?:\x07|\x1b\\)|\x1b[()][A-Z0-9]|\x1b[>=<]|\x1b\x5b[0-9;]*[A-Za-z]|\x9b[0-9;]*[A-Za-z]/g;
-
-function parseTokenCount(s: string): number {
-  const cleaned = s.replace(/,/g, '').trim().toLowerCase();
-  if (cleaned.endsWith('k')) return Math.round(parseFloat(cleaned) * 1000);
-  if (cleaned.endsWith('m')) return Math.round(parseFloat(cleaned) * 1_000_000);
-  return parseInt(cleaned, 10) || 0;
-}
-
-function parseStatsLine(managed: ManagedSession, line: string, sessionId: string): void {
-  const clean = line.replace(ANSI_RE, '').trim();
-  if (!clean) return;
-
-  let changed = false;
-
-  // Match various copilot output patterns for tokens
-  // "1.2k tokens", "Tokens: 1,234", "tokens sent: 100", "tokens received: 200"
-  const tokenMatch = clean.match(/(\d[\d,.]*[kKmM]?)\s*tokens?\b/i)
-    || clean.match(/tokens?\s*(?:used|total|count|sent|received)?[:\s]+(\d[\d,.]*[kKmM]?)/i);
-  if (tokenMatch) {
-    managed.stats.tokensTotal = parseTokenCount(tokenMatch[1]);
-    changed = true;
-  }
-
-  // Match "N in, M out" token breakdown (e.g. "Tokens: 1234 in, 5678 out")
-  const inOutMatch = clean.match(/(\d[\d,.]*[kKmM]?)\s*in\b.*?(\d[\d,.]*[kKmM]?)\s*out\b/i);
-  if (inOutMatch) {
-    managed.stats.tokensIn = parseTokenCount(inOutMatch[1]);
-    managed.stats.tokensOut = parseTokenCount(inOutMatch[2]);
-    managed.stats.tokensTotal = managed.stats.tokensIn + managed.stats.tokensOut;
-    changed = true;
-  }
-
-  // Also match "Nk sent" or "N received" patterns common in copilot output
-  const sentReceivedMatch = clean.match(/(\d[\d,.]*[kKmM]?)\s*sent.*?(\d[\d,.]*[kKmM]?)\s*(?:received|recv)/i)
-    || clean.match(/sent[:\s]*(\d[\d,.]*[kKmM]?).*?(?:received|recv)[:\s]*(\d[\d,.]*[kKmM]?)/i);
-  if (sentReceivedMatch) {
-    managed.stats.tokensIn = parseTokenCount(sentReceivedMatch[1]);
-    managed.stats.tokensOut = parseTokenCount(sentReceivedMatch[2]);
-    managed.stats.tokensTotal = managed.stats.tokensIn + managed.stats.tokensOut;
-    changed = true;
-  }
-
-  // Match premium request patterns: "N premium request(s)", "premium requests: N", "N/M premium"
-  const premiumMatch = clean.match(/premium\s*request/i);
-  if (premiumMatch) {
-    const countMatch = clean.match(/(\d[\d,.]*)\s*(?:\/\s*\d[\d,]*)?\s*premium/i)
-      || clean.match(/premium[^:]*:\s*(\d[\d,.]*)/i);
-    if (countMatch) {
-      managed.stats.premiumRequests = parseTokenCount(countMatch[1]);
-    } else {
-      managed.stats.premiumRequests++;
-    }
-    changed = true;
-  }
-
-  // Match "requests this session: N" or "requests used: N" or "requests consumed: N"
-  const requestMatch = clean.match(/requests?\s*(?:this\s+session|used|consumed)[:\s]*(\d[\d,.]*)/i);
-  if (requestMatch) {
-    managed.stats.premiumRequests = parseTokenCount(requestMatch[1]);
-    changed = true;
-  }
-
-  if (changed) {
-    managed.stats.lastUpdated = new Date().toISOString();
-    broadcast('session:stats', { sessionId, stats: managed.stats });
-  }
 }

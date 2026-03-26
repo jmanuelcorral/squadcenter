@@ -44,12 +44,14 @@ export interface BrowseResult {
   entries: DirectoryEntry[];
 }
 
-// Session Stats (token consumption + premium requests)
+// Session Stats (token consumption + premium requests + session activity)
 export interface SessionStats {
   tokensIn: number;
   tokensOut: number;
   tokensTotal: number;
   premiumRequests: number;
+  turns: number;
+  toolCalls: number;
   lastUpdated: string;
 }
 
