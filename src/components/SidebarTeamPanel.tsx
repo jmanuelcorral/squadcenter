@@ -211,7 +211,7 @@ export default function SidebarTeamPanel({ projectId, sessionId }: SidebarTeamPa
   // Subscribe to live activity broadcasts
   useEffect(() => {
     if (!sessionId) return;
-    const cleanup = window.electronAPI.on('session:agentActivity', (payload: unknown) => {
+    const cleanup = window.electronAPI.on('event:session:agentActivity', (payload: unknown) => {
       const data = payload as { sessionId: string; activity: AgentActivity };
       if (data.sessionId === sessionId) {
         setActivity(data.activity);
