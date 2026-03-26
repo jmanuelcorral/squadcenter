@@ -66,7 +66,7 @@ export async function detectMcpServers(projectPath: string): Promise<McpServer[]
 
 export async function detectAzureAccount(): Promise<AzureAccount | null> {
   return new Promise((resolve) => {
-    execFile('az', ['account', 'show', '--output', 'json'], { timeout: 5000 }, (error, stdout) => {
+    execFile('az', ['account', 'show', '--output', 'json'], { timeout: 5000, shell: true }, (error, stdout) => {
       if (error || !stdout) {
         resolve(null);
         return;
