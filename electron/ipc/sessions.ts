@@ -12,6 +12,8 @@ import {
   refreshSessionStats,
   getSessionAzureAccount,
   getSessionMcpServers,
+  getSessionAgentActivity,
+  refreshSessionAgentActivity,
   listSessions,
 } from '../services/session-manager.js';
 
@@ -83,5 +85,15 @@ export function registerSessionHandlers(ipcMain: IpcMain): void {
   // sessions:getAzureAccount — get cached Azure account for a session
   ipcMain.handle('sessions:getAzureAccount', (_event, { sessionId }: { sessionId: string }) => {
     return getSessionAzureAccount(sessionId);
+  });
+
+  // sessions:getAgentActivity — get agent activity for a session
+  ipcMain.handle('sessions:getAgentActivity', (_event, { id }: { id: string }) => {
+    return getSessionAgentActivity(id);
+  });
+
+  // sessions:refreshAgentActivity — force refresh agent activity from copilot logs
+  ipcMain.handle('sessions:refreshAgentActivity', async (_event, { id }: { id: string }) => {
+    return refreshSessionAgentActivity(id);
   });
 }

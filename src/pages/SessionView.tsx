@@ -10,6 +10,7 @@ import ActivityTimeline from '../components/ActivityTimeline';
 import SessionStatsPanel from '../components/SessionStatsPanel';
 import SidebarTeamPanel from '../components/SidebarTeamPanel';
 import McpServersPanel from '../components/McpServersPanel';
+import AgentActivityPanel from '../components/AgentActivityPanel';
 import AzureAccountPanel from '../components/AzureAccountPanel';
 
 const statusColors: Record<string, string> = {
@@ -254,6 +255,9 @@ export default function SessionView() {
 
             {/* Team */}
             <SidebarTeamPanel projectId={session.projectId} compact />
+
+            {/* Agent Activity */}
+            <AgentActivityPanel sessionId={session.id} />
 
             {/* MCP Servers */}
             <McpServersPanel sessionId={session.id} />

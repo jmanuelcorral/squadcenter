@@ -172,6 +172,46 @@ export function setupProjectHooks(projectId: string): Promise<{ success: boolean
   return window.electronAPI.invoke('projects:setupHooks', { id: projectId });
 }
 
+// Agent Activity (real-time tool calls & subagent tracking)
+export interface AgentToolCall {
+  id: string;
+  toolName: string;
+  arguments: Record<string, any>;
+  status: 'running' | 'completed' | 'failed';
+  startTime: string;
+  endTime?: string;
+  result?: string;
+  model?: string;
+}
+
+export interface SubagentSpawn {
+  id: string;
+  name: string;
+  description: string;
+  agentType: string;
+  status: 'running' | 'completed' | 'failed';
+  startTime: string;
+  endTime?: string;
+  result?: string;
+}
+
+export interface AgentActivity {
+  isActive: boolean;
+  currentTurnStart?: string;
+  agentName?: string;
+  toolCalls: AgentToolCall[];
+  subagents: SubagentSpawn[];
+  lastUpdated: string;
+}
+
+export function getAgentActivity(sessionId: string): Promise<AgentActivity | null> {
+  return window.electronAPI.invoke('sessions:getAgentActivity', { id: sessionId });
+}
+
+export function refreshAgentActivity(sessionId: string): Promise<AgentActivity | null> {
+  return window.electronAPI.invoke('sessions:refreshAgentActivity', { id: sessionId });
+}
+
 // MCP Servers
 export interface McpServer {
   name: string;

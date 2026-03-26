@@ -4,7 +4,7 @@ import * as pty from 'node-pty';
 import type { Session, SessionMessage } from '../../shared/types.js';
 import { broadcast } from './event-bridge.js';
 import { detectAzureAccount, detectMcpServers, type AzureAccount, type McpServer } from './environment-info.js';
-import { watchCopilotSession, forceRefreshStats, type CopilotSessionStats } from './copilot-log-watcher.js';
+import { watchCopilotSession, forceRefreshStats, forceRefreshActivity, type CopilotSessionStats, type AgentActivity } from './copilot-log-watcher.js';
 
 const MAX_OUTPUT_LINES = 500;
 
@@ -32,6 +32,7 @@ interface ManagedSession {
   azureAccount?: AzureAccount | null;
   mcpServers?: McpServer[];
   logWatcher?: { stop: () => void };
+  agentActivity?: AgentActivity;
 }
 
 const sessions = new Map<string, ManagedSession>();
@@ -227,18 +228,25 @@ export async function startCopilotSession(projectId: string, projectPath: string
   broadcastSessionStatus(session);
 
   // Start watching copilot session logs for real stats
-  const logWatcher = watchCopilotSession(projectPath, (copilotStats) => {
-    managed.stats = {
-      tokensIn: 0,
-      tokensOut: copilotStats.outputTokens,
-      tokensTotal: copilotStats.outputTokens,
-      premiumRequests: copilotStats.premiumRequests,
-      turns: copilotStats.turns,
-      toolCalls: copilotStats.toolCalls,
-      lastUpdated: copilotStats.lastUpdated,
-    };
-    broadcast('session:stats', { sessionId: id, stats: managed.stats });
-  });
+  const logWatcher = watchCopilotSession(
+    projectPath,
+    (copilotStats) => {
+      managed.stats = {
+        tokensIn: 0,
+        tokensOut: copilotStats.outputTokens,
+        tokensTotal: copilotStats.outputTokens,
+        premiumRequests: copilotStats.premiumRequests,
+        turns: copilotStats.turns,
+        toolCalls: copilotStats.toolCalls,
+        lastUpdated: copilotStats.lastUpdated,
+      };
+      broadcast('session:stats', { sessionId: id, stats: managed.stats });
+    },
+    (activity) => {
+      managed.agentActivity = activity;
+      broadcast('session:agentActivity', { sessionId: id, activity });
+    },
+  );
   managed.logWatcher = logWatcher;
 
   return session;
@@ -365,4 +373,17 @@ export function getSessionAzureAccount(sessionId: string): AzureAccount | null {
 
 export function getSessionMcpServers(sessionId: string): McpServer[] {
   return sessions.get(sessionId)?.mcpServers ?? [];
+}
+
+export function getSessionAgentActivity(sessionId: string): AgentActivity | null {
+  return sessions.get(sessionId)?.agentActivity ?? null;
+}
+
+export async function refreshSessionAgentActivity(sessionId: string): Promise<AgentActivity | null> {
+  const managed = sessions.get(sessionId);
+  if (!managed) return null;
+  const activity = await forceRefreshActivity(managed.session.projectPath);
+  managed.agentActivity = activity;
+  broadcast('session:agentActivity', { sessionId, activity });
+  return activity;
 }
