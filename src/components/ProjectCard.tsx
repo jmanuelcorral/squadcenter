@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Play, Terminal, Loader2, Clock, Sparkles, Square } from 'lucide-react';
+import { Play, Terminal, Loader2, Clock, Sparkles, Square, Rocket } from 'lucide-react';
 import type { Project } from '@shared/types';
 import { getProjectStatus, startSession, startCopilotSession, stopSession, getHookEvents } from '../lib/api';
 import type { ProjectStatus, HookEvent } from '../lib/api';
@@ -21,6 +21,7 @@ export default function ProjectCard({ project }: { project: Project }) {
   const [status, setStatus] = useState<ProjectStatus | null>(null);
   const [launching, setLaunching] = useState(false);
   const [launchingCopilot, setLaunchingCopilot] = useState(false);
+  const [launchingBackground, setLaunchingBackground] = useState(false);
   const [stoppingCopilot, setStoppingCopilot] = useState(false);
   const [hookEvents, setHookEvents] = useState<HookEvent[]>([]);
 
@@ -71,6 +72,21 @@ export default function ProjectCard({ project }: { project: Project }) {
       navigate(`/sessions/${session.id}`);
     } catch {
       setLaunchingCopilot(false);
+    }
+  }
+
+  async function handleCopilotBackground(e: React.MouseEvent) {
+    e.stopPropagation();
+    setLaunchingBackground(true);
+    try {
+      await startCopilotSession(project.id, project.path);
+      // Don't navigate — session runs in background, notification will fire on completion
+      const refreshed = await getProjectStatus(project.id);
+      setStatus(refreshed);
+    } catch {
+      // ignore
+    } finally {
+      setLaunchingBackground(false);
     }
   }
 
@@ -187,21 +203,32 @@ export default function ProjectCard({ project }: { project: Project }) {
             </button>
           </div>
         ) : (
-          <button
-            onClick={handleCopilotStart}
-            disabled={launchingCopilot}
-            className="w-full flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-violet-500 to-purple-600 px-3 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-500/20 hover:from-violet-400 hover:to-purple-500 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed animate-[copilot-glow_3s_ease-in-out_infinite]"
-            style={{ animationName: 'none' }}
-            onMouseEnter={(e) => { (e.target as HTMLElement).style.animationName = 'copilot-glow'; }}
-            onMouseLeave={(e) => { (e.target as HTMLElement).style.animationName = 'none'; }}
-          >
-            {launchingCopilot ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Sparkles className="w-4 h-4" />
-            )}
-            Start Copilot
-          </button>
+          <div className="flex gap-1.5">
+            <button
+              onClick={handleCopilotStart}
+              disabled={launchingCopilot || launchingBackground}
+              className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-violet-500 to-purple-600 px-3 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-500/20 hover:from-violet-400 hover:to-purple-500 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {launchingCopilot ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Sparkles className="w-4 h-4" />
+              )}
+              Start Copilot
+            </button>
+            <button
+              onClick={handleCopilotBackground}
+              disabled={launchingCopilot || launchingBackground}
+              className="flex items-center justify-center gap-1.5 rounded-lg bg-slate-700/60 px-3 py-2.5 text-sm font-medium text-slate-300 ring-1 ring-white/10 hover:bg-slate-700/80 hover:text-white transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+              title="Launch in background — get notified when done"
+            >
+              {launchingBackground ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Rocket className="w-4 h-4" />
+              )}
+            </button>
+          </div>
         )}
       </div>
 

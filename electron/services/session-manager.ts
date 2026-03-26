@@ -1,10 +1,11 @@
 import { spawn, type ChildProcess } from 'child_process';
 import crypto from 'crypto';
 import * as pty from 'node-pty';
-import type { Session, SessionMessage } from '../../shared/types.js';
+import type { Session, SessionMessage, Notification } from '../../shared/types.js';
 import { broadcast } from './event-bridge.js';
 import { detectAzureAccount, detectMcpServers, type AzureAccount, type McpServer } from './environment-info.js';
 import { watchCopilotSession, forceRefreshStats, forceRefreshActivity, type CopilotSessionStats, type AgentActivity } from './copilot-log-watcher.js';
+import { loadNotifications, saveNotifications, loadProjects } from './storage.js';
 
 const MAX_OUTPUT_LINES = 500;
 
@@ -214,11 +215,36 @@ export async function startCopilotSession(projectId: string, projectPath: string
     broadcast('session:ptyData', { sessionId: id, data });
   });
 
-  ptyProcess.onExit(() => {
+  ptyProcess.onExit(async () => {
     session.status = 'stopped';
     session.pid = undefined;
     addMessage(managed, 'system', 'Copilot session ended');
     broadcastSessionStatus(session);
+
+    // Create completion notification
+    try {
+      const projects = await loadProjects();
+      const project = projects.find((p) => p.id === session.projectId);
+      const projectName = project?.name ?? session.projectPath.split(/[\\/]/).pop() ?? 'Unknown';
+
+      const notification: Notification = {
+        id: crypto.randomUUID(),
+        projectId: session.projectId,
+        sessionId: session.id,
+        agentName: 'Squad',
+        message: `Session completed for "${projectName}"`,
+        type: 'success',
+        read: false,
+        createdAt: new Date().toISOString(),
+      };
+
+      const existing = await loadNotifications();
+      existing.unshift(notification);
+      await saveNotifications(existing);
+      broadcast('notification', notification);
+    } catch {
+      // Notification creation is best-effort
+    }
   });
 
   session.status = 'active';

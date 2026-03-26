@@ -20,6 +20,7 @@ export interface TeamMember {
 export interface Notification {
   id: string;
   projectId: string;
+  sessionId?: string;
   agentName: string;
   message: string;
   type: 'info' | 'success' | 'warning' | 'error';

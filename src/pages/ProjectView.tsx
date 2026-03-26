@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Users, Activity, Trash2, Radio, Sparkles, Loader2, Square } from 'lucide-react';
+import { ChevronLeft, Users, Activity, Trash2, Radio, Sparkles, Loader2, Square, Rocket } from 'lucide-react';
 import { fetchProject, fetchTeam, fetchLogs, deleteProject, getHookEvents, startCopilotSession, stopSession, getProjectStatus } from '../lib/api';
 import type { Project, TeamMember, ChatMessage } from '@shared/types';
 import type { HookEvent, ProjectStatus } from '../lib/api';
@@ -21,6 +21,7 @@ export default function ProjectView() {
   const [hookEventCount, setHookEventCount] = useState(0);
   const [copilotStatus, setCopilotStatus] = useState<ProjectStatus | null>(null);
   const [launchingCopilot, setLaunchingCopilot] = useState(false);
+  const [launchingBackground, setLaunchingBackground] = useState(false);
   const [stoppingCopilot, setStoppingCopilot] = useState(false);
   const feedRef = useRef<HTMLDivElement>(null);
 
@@ -67,6 +68,20 @@ export default function ProjectView() {
       navigate(`/sessions/${session.id}`);
     } catch {
       setLaunchingCopilot(false);
+    }
+  }
+
+  async function handleCopilotBackground() {
+    if (!id || !project) return;
+    setLaunchingBackground(true);
+    try {
+      await startCopilotSession(id, project.path);
+      const refreshed = await getProjectStatus(id);
+      setCopilotStatus(refreshed);
+    } catch {
+      // ignore
+    } finally {
+      setLaunchingBackground(false);
     }
   }
 
@@ -168,18 +183,33 @@ export default function ProjectView() {
               </button>
             </div>
           ) : (
-            <button
-              onClick={handleCopilotStart}
-              disabled={launchingCopilot}
-              className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-violet-500 to-purple-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-500/20 hover:from-violet-400 hover:to-purple-500 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {launchingCopilot ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Sparkles className="w-4 h-4" />
-              )}
-              Start Copilot
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleCopilotStart}
+                disabled={launchingCopilot || launchingBackground}
+                className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-violet-500 to-purple-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-500/20 hover:from-violet-400 hover:to-purple-500 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {launchingCopilot ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Sparkles className="w-4 h-4" />
+                )}
+                Start Copilot
+              </button>
+              <button
+                onClick={handleCopilotBackground}
+                disabled={launchingCopilot || launchingBackground}
+                className="flex items-center gap-2 rounded-lg bg-slate-700/60 px-3 py-2.5 text-sm font-medium text-slate-300 ring-1 ring-white/10 hover:bg-slate-700/80 hover:text-white transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                title="Launch in background — get notified when done"
+              >
+                {launchingBackground ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Rocket className="w-4 h-4" />
+                )}
+                Background
+              </button>
+            </div>
           )}
           <SetupHooksButton projectId={id!} />
           <button

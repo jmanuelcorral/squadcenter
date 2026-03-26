@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { Bell, Check, X, AlertTriangle, Info, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Bell, Check, X, AlertTriangle, Info, Trash2, ExternalLink } from 'lucide-react';
 import { useNotifications } from '../hooks/useNotifications';
 
 const typeConfig = {
@@ -23,6 +24,7 @@ export default function NotificationPanel() {
   const { notifications, unreadCount, markRead, clearAll } = useNotifications();
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -72,13 +74,20 @@ export default function NotificationPanel() {
               {notifications.map((n) => {
                 const config = typeConfig[n.type];
                 const Icon = config.icon;
+                const hasSession = !!n.sessionId;
                 return (
                   <button
                     key={n.id}
-                    onClick={() => markRead(n.id)}
+                    onClick={() => {
+                      markRead(n.id);
+                      if (hasSession) {
+                        setOpen(false);
+                        navigate(`/sessions/${n.sessionId}`);
+                      }
+                    }}
                     className={`w-full flex items-start gap-3 p-3 text-left hover:bg-white/5 transition-colors ${
                       n.read ? 'opacity-50' : ''
-                    }`}
+                    } ${hasSession ? 'cursor-pointer' : ''}`}
                   >
                     <div className={`mt-0.5 p-1 rounded-md ${config.bg}`}>
                       <Icon className={`w-3.5 h-3.5 ${config.color}`} />
@@ -88,9 +97,14 @@ export default function NotificationPanel() {
                       <p className="text-xs text-slate-400 mt-0.5 line-clamp-2">{n.message}</p>
                       <p className="text-[10px] text-slate-500 mt-1">{timeAgo(n.createdAt)}</p>
                     </div>
-                    {!n.read && (
-                      <div className="mt-1.5 w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                    )}
+                    <div className="flex flex-col items-center gap-1">
+                      {!n.read && (
+                        <div className="mt-1.5 w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                      )}
+                      {hasSession && (
+                        <ExternalLink className="w-3 h-3 text-slate-500 mt-1" />
+                      )}
+                    </div>
                   </button>
                 );
               })}
