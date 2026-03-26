@@ -112,10 +112,11 @@ const liveStatusDot: Record<string, string> = {
   done: 'bg-emerald-400',
 };
 
+// Without live activity data, all members show neutral gray
 const staticStatusDot: Record<string, string> = {
-  idle: 'bg-emerald-400',
-  working: 'bg-violet-400',
-  done: 'bg-slate-400',
+  idle: 'bg-slate-600',
+  working: 'bg-slate-600',
+  done: 'bg-slate-600',
 };
 
 function MemberRow({

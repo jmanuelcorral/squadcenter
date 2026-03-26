@@ -314,8 +314,8 @@ export function watchCopilotSession(
         const activity = await parseAgentActivity(eventsPath);
         onActivityUpdate(activity);
       }
-    }, 3000);
-    console.log(LOG_PREFIX, 'Polling events file every 3s:', eventsPath);
+    }, 1500);
+    console.log(LOG_PREFIX, 'Polling events file every 1.5s:', eventsPath);
   };
 
   const startWatching = async () => {
