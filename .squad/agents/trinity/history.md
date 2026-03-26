@@ -192,3 +192,19 @@ Added three stacked panels to the SessionView right sidebar (2 new components, 2
 - SidebarTeamPanel is a separate component from the existing TeamPanel — different data flow (self-fetching vs prop-driven) and different layout (compact sidebar vs expandable detail)
 - Sidebar container gets `overflow-y-auto` so panels can scroll if content exceeds viewport
 - TypeScript compiles cleanly with zero errors
+
+### 2025-07-22 — MCP Servers & Azure Account Sidebar Panels
+
+Added two new sidebar panels to SessionView (2 new components, 2 modified files):
+
+- **API layer (`lib/api.ts`):** Added `McpServer` interface (`name`, `type`, `command?`, `url?`) with `getMcpServers(projectPath)` IPC wrapper for `sessions:getMcpServers`. Added `AzureAccount` interface (`user`, `tenantId`, `tenantName?`, `subscriptionId?`, `subscriptionName?`) with `getAzureAccount()` IPC wrapper for `sessions:getAzureAccount`
+- **McpServersPanel.tsx:** Compact sidebar card showing detected MCP servers — Plug icon header with count badge, server rows with name + type pill badges (blue for stdio, green for sse, gray for unknown), skeleton loading state, italic empty state. Fetches on mount and when `projectPath` changes
+- **AzureAccountPanel.tsx:** Azure account info with privacy toggle — Cloud icon header with Eye/EyeOff toggle button. Default state obfuscates email (`j***@c***.com`), tenant GUID (first 4 + last 4 chars), and hides subscription ID. Revealed state shows all values. Uses `obfuscateEmail()` and `obfuscateGuid()` helper functions. Shows "Not connected" when Azure CLI not logged in
+- **SessionView.tsx:** Added both panels between SidebarTeamPanel and ActivityTimeline in the right sidebar. Imported `McpServersPanel` and `AzureAccountPanel`
+- **Build:** Vite production build passes — 650 KB JS + 60 KB CSS
+
+**Key decisions:**
+- Obfuscation is default (privacy-first) — user must click eye icon to reveal sensitive Azure values
+- McpServersPanel takes `projectPath` prop (project-scoped), AzureAccountPanel takes no props (global Azure account)
+- Both panels follow existing sidebar pattern: `border-b border-white/5 px-4 py-3` container, skeleton loading, graceful error handling
+- Type badge color scheme: blue=stdio, green=sse, gray=unknown — consistent with protocol semantics

@@ -170,6 +170,31 @@ export function setupProjectHooks(projectId: string): Promise<{ success: boolean
   return window.electronAPI.invoke('projects:setupHooks', { id: projectId });
 }
 
+// MCP Servers
+export interface McpServer {
+  name: string;
+  type: string;
+  command?: string;
+  url?: string;
+}
+
+export function getMcpServers(projectPath: string): Promise<McpServer[]> {
+  return window.electronAPI.invoke('sessions:getMcpServers', { projectPath });
+}
+
+// Azure Account
+export interface AzureAccount {
+  user: string;
+  tenantId: string;
+  tenantName?: string;
+  subscriptionId?: string;
+  subscriptionName?: string;
+}
+
+export function getAzureAccount(): Promise<AzureAccount | null> {
+  return window.electronAPI.invoke('sessions:getAzureAccount');
+}
+
 // Session Stats
 export function getSessionStats(id: string): Promise<SessionStats | null> {
   return window.electronAPI.invoke('sessions:getStats', { id });

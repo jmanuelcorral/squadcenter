@@ -146,3 +146,15 @@
 - New `sessions:getStats` IPC handler in `electron/ipc/sessions.ts` exposes stats to renderer.
 - **Decision:** Only count what Copilot reports — no increment-per-prompt heuristic. Each prompt doesn't necessarily equal one premium request.
 - Build succeeds with zero errors.
+
+### 2025-07-20 — Added environment detection service + IPC handlers
+- Created `electron/services/environment-info.ts` — two exported async functions for environment introspection:
+  - `detectMcpServers(projectPath)` — scans 4 config locations (`.copilot/mcp.json`, `.copilot/mcp-config.json`, `.vscode/mcp.json`, user-level `~/.copilot/mcp.json`), parses both `servers` and `mcpServers` keys, infers type from `command`/`url` presence, deduplicates by name
+  - `detectAzureAccount()` — shells out to `az account show --output json` with 5-second timeout, returns user/tenant/subscription info or null on failure
+- Exported `McpServer` and `AzureAccount` interfaces for type-safe consumption
+- Added two IPC handlers in `electron/ipc/sessions.ts`:
+  - `sessions:getMcpServers` — takes `{ projectPath }`, returns `McpServer[]` (per-project detection)
+  - `sessions:getAzureAccount` — no args, returns `AzureAccount | null` (global detection since `az` uses global login)
+- No changes to IPC barrel (`index.ts`) needed — handlers register within existing `registerSessionHandlers()`
+- No `src/` files modified — Trinity owns the renderer
+- Build succeeds with zero errors

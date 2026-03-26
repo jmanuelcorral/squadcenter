@@ -9,6 +9,8 @@ import ChatInput from '../components/ChatInput';
 import ActivityTimeline from '../components/ActivityTimeline';
 import SessionStatsPanel from '../components/SessionStatsPanel';
 import SidebarTeamPanel from '../components/SidebarTeamPanel';
+import McpServersPanel from '../components/McpServersPanel';
+import AzureAccountPanel from '../components/AzureAccountPanel';
 
 const statusColors: Record<string, string> = {
   starting: 'bg-amber-500/10 text-amber-400 ring-amber-500/30',
@@ -252,6 +254,12 @@ export default function SessionView() {
 
             {/* Team */}
             <SidebarTeamPanel projectId={session.projectId} compact />
+
+            {/* MCP Servers */}
+            <McpServersPanel projectPath={session.projectPath} />
+
+            {/* Azure Account */}
+            <AzureAccountPanel />
 
             {/* Activity Timeline */}
             <div className="flex items-center gap-2 px-4 py-2.5 border-b border-white/5">

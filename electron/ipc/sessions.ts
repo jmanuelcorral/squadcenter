@@ -11,6 +11,7 @@ import {
   getSessionStats,
   listSessions,
 } from '../services/session-manager.js';
+import { detectMcpServers, detectAzureAccount } from '../services/environment-info.js';
 
 export function registerSessionHandlers(ipcMain: IpcMain): void {
   // sessions:list — list all sessions
@@ -65,5 +66,15 @@ export function registerSessionHandlers(ipcMain: IpcMain): void {
   // sessions:getStats — get session token/premium stats
   ipcMain.handle('sessions:getStats', (_event, { id }: { id: string }) => {
     return getSessionStats(id);
+  });
+
+  // sessions:getMcpServers — detect MCP server configs for a project
+  ipcMain.handle('sessions:getMcpServers', async (_event, { projectPath }: { projectPath: string }) => {
+    return detectMcpServers(projectPath);
+  });
+
+  // sessions:getAzureAccount — detect Azure CLI account info
+  ipcMain.handle('sessions:getAzureAccount', async () => {
+    return detectAzureAccount();
   });
 }
