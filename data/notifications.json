@@ -1,1 +1,12 @@
-[]
+[
+  {
+    "id": "ff370562-6af8-4120-9847-f79f6bcdcff6",
+    "projectId": "326e6fac-5afb-4718-8ca7-17bad345d51a",
+    "sessionId": "89c7b28c-df8e-4b3a-a210-b4995b7a76ce",
+    "agentName": "Squad",
+    "message": "Session completed for \"Session sobre ACR Private Caches — PowerPoint corporativo Microsoft + infraestructura Azure\"",
+    "type": "success",
+    "read": true,
+    "createdAt": "2026-03-26T15:54:45.211Z"
+  }
+]

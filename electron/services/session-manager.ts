@@ -34,6 +34,7 @@ interface ManagedSession {
   mcpServers?: McpServer[];
   logWatcher?: { stop: () => void };
   agentActivity?: AgentActivity;
+  notifiedSubagents: Set<string>;
 }
 
 const sessions = new Map<string, ManagedSession>();
@@ -156,6 +157,7 @@ export function startSession(projectId: string, projectPath: string): Session {
     outputBuffer: [],
     messages: [],
     stats: createEmptyStats(),
+    notifiedSubagents: new Set(),
   };
 
   sessions.set(id, managed);
@@ -207,6 +209,7 @@ export async function startCopilotSession(projectId: string, projectPath: string
     stats: createEmptyStats(),
     azureAccount,
     mcpServers,
+    notifiedSubagents: new Set(),
   };
 
   sessions.set(id, managed);
@@ -269,6 +272,39 @@ export async function startCopilotSession(projectId: string, projectPath: string
       broadcast('session:stats', { sessionId: id, stats: managed.stats });
     },
     (activity) => {
+      // Detect newly completed subagents and create notifications
+      if (activity.members) {
+        for (const [memberName, memberAct] of Object.entries(activity.members)) {
+          for (const sub of memberAct.subagents) {
+            if (
+              (sub.status === 'completed' || sub.status === 'failed') &&
+              !managed.notifiedSubagents.has(sub.id)
+            ) {
+              managed.notifiedSubagents.add(sub.id);
+              const notification: Notification = {
+                id: crypto.randomUUID(),
+                projectId: session.projectId,
+                sessionId: session.id,
+                agentName: memberName,
+                message: sub.status === 'completed'
+                  ? `✅ ${sub.description || sub.name}`
+                  : `❌ ${sub.description || sub.name}`,
+                type: sub.status === 'completed' ? 'info' : 'warning',
+                read: false,
+                createdAt: sub.endTime ?? new Date().toISOString(),
+              };
+              broadcast('notification', notification);
+              // Persist async (best-effort)
+              loadNotifications()
+                .then((existing) => {
+                  existing.unshift(notification);
+                  return saveNotifications(existing);
+                })
+                .catch(() => {});
+            }
+          }
+        }
+      }
       managed.agentActivity = activity;
       broadcast('session:agentActivity', { sessionId: id, activity });
     },

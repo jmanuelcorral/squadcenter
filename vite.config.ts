@@ -30,4 +30,9 @@ export default defineConfig({
     },
   },
   base: './',
+  server: {
+    watch: {
+      ignored: ['**/data/**'],
+    },
+  },
 });
