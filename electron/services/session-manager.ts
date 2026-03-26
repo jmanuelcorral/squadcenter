@@ -270,6 +270,12 @@ export function sendInput(sessionId: string, text: string): boolean {
   if (managed.session.type === 'copilot') {
     if (!managed.pty) return false;
     managed.pty.write(text);
+    // Count Enter keypresses as premium requests (user submitted a prompt)
+    if (text.includes('\r') || text.includes('\n')) {
+      managed.stats.premiumRequests++;
+      managed.stats.lastUpdated = new Date().toISOString();
+      broadcast('session:stats', { sessionId, stats: managed.stats });
+    }
     return true;
   }
 
@@ -314,8 +320,15 @@ export function getSessionStats(sessionId: string): SessionStats | null {
   return sessions.get(sessionId)?.stats ?? null;
 }
 
-// Strip ANSI escape codes for clean text parsing
-const ANSI_RE = /\x1b\[[0-9;]*[A-Za-z]|\x1b\].*?(?:\x07|\x1b\\)/g;
+// Strip ANSI escape codes for clean text parsing (CSI, OSC, charset, mode, kitty, 8-bit CSI)
+const ANSI_RE = /\x1b\[[0-9;?]*[A-Za-z]|\x1b\][^\x07]*(?:\x07|\x1b\\)|\x1b[()][A-Z0-9]|\x1b[>=<]|\x1b\x5b[0-9;]*[A-Za-z]|\x9b[0-9;]*[A-Za-z]/g;
+
+function parseTokenCount(s: string): number {
+  const cleaned = s.replace(/,/g, '').trim().toLowerCase();
+  if (cleaned.endsWith('k')) return Math.round(parseFloat(cleaned) * 1000);
+  if (cleaned.endsWith('m')) return Math.round(parseFloat(cleaned) * 1_000_000);
+  return parseInt(cleaned, 10) || 0;
+}
 
 function parseStatsLine(managed: ManagedSession, line: string, sessionId: string): void {
   const clean = line.replace(ANSI_RE, '').trim();
@@ -323,19 +336,30 @@ function parseStatsLine(managed: ManagedSession, line: string, sessionId: string
 
   let changed = false;
 
-  // Match "N tokens" or "tokens: N" or "Tokens used: N"
-  const tokenMatch = clean.match(/(\d[\d,]*)\s*tokens?\b/i)
-    || clean.match(/tokens?\s*(?:used|total|count)?[:\s]+(\d[\d,]*)/i);
+  // Match various copilot output patterns for tokens
+  // "1.2k tokens", "Tokens: 1,234", "tokens sent: 100", "tokens received: 200"
+  const tokenMatch = clean.match(/(\d[\d,.]*[kKmM]?)\s*tokens?\b/i)
+    || clean.match(/tokens?\s*(?:used|total|count|sent|received)?[:\s]+(\d[\d,.]*[kKmM]?)/i);
   if (tokenMatch) {
-    managed.stats.tokensTotal = parseInt(tokenMatch[1].replace(/,/g, ''), 10);
+    managed.stats.tokensTotal = parseTokenCount(tokenMatch[1]);
     changed = true;
   }
 
   // Match "N in, M out" token breakdown (e.g. "Tokens: 1234 in, 5678 out")
-  const inOutMatch = clean.match(/(\d[\d,]*)\s*in\b.*?(\d[\d,]*)\s*out\b/i);
+  const inOutMatch = clean.match(/(\d[\d,.]*[kKmM]?)\s*in\b.*?(\d[\d,.]*[kKmM]?)\s*out\b/i);
   if (inOutMatch) {
-    managed.stats.tokensIn = parseInt(inOutMatch[1].replace(/,/g, ''), 10);
-    managed.stats.tokensOut = parseInt(inOutMatch[2].replace(/,/g, ''), 10);
+    managed.stats.tokensIn = parseTokenCount(inOutMatch[1]);
+    managed.stats.tokensOut = parseTokenCount(inOutMatch[2]);
+    managed.stats.tokensTotal = managed.stats.tokensIn + managed.stats.tokensOut;
+    changed = true;
+  }
+
+  // Also match "Nk sent" or "N received" patterns common in copilot output
+  const sentReceivedMatch = clean.match(/(\d[\d,.]*[kKmM]?)\s*sent.*?(\d[\d,.]*[kKmM]?)\s*(?:received|recv)/i)
+    || clean.match(/sent[:\s]*(\d[\d,.]*[kKmM]?).*?(?:received|recv)[:\s]*(\d[\d,.]*[kKmM]?)/i);
+  if (sentReceivedMatch) {
+    managed.stats.tokensIn = parseTokenCount(sentReceivedMatch[1]);
+    managed.stats.tokensOut = parseTokenCount(sentReceivedMatch[2]);
     managed.stats.tokensTotal = managed.stats.tokensIn + managed.stats.tokensOut;
     changed = true;
   }
@@ -343,10 +367,10 @@ function parseStatsLine(managed: ManagedSession, line: string, sessionId: string
   // Match premium request patterns: "N premium request(s)", "premium requests: N", "N/M premium"
   const premiumMatch = clean.match(/premium\s*request/i);
   if (premiumMatch) {
-    const countMatch = clean.match(/(\d[\d,]*)\s*(?:\/\s*\d[\d,]*)?\s*premium/i)
-      || clean.match(/premium[^:]*:\s*(\d[\d,]*)/i);
+    const countMatch = clean.match(/(\d[\d,.]*)\s*(?:\/\s*\d[\d,]*)?\s*premium/i)
+      || clean.match(/premium[^:]*:\s*(\d[\d,.]*)/i);
     if (countMatch) {
-      managed.stats.premiumRequests = parseInt(countMatch[1].replace(/,/g, ''), 10);
+      managed.stats.premiumRequests = parseTokenCount(countMatch[1]);
     } else {
       managed.stats.premiumRequests++;
     }
@@ -354,9 +378,9 @@ function parseStatsLine(managed: ManagedSession, line: string, sessionId: string
   }
 
   // Match "requests this session: N" or "requests used: N" or "requests consumed: N"
-  const requestMatch = clean.match(/requests?\s*(?:this\s+session|used|consumed)[:\s]*(\d[\d,]*)/i);
+  const requestMatch = clean.match(/requests?\s*(?:this\s+session|used|consumed)[:\s]*(\d[\d,.]*)/i);
   if (requestMatch) {
-    managed.stats.premiumRequests = parseInt(requestMatch[1].replace(/,/g, ''), 10);
+    managed.stats.premiumRequests = parseTokenCount(requestMatch[1]);
     changed = true;
   }
 
