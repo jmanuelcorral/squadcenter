@@ -161,7 +161,7 @@ export function startCopilotSession(projectId: string, projectPath: string): Ses
     startedAt: new Date().toISOString(),
   };
 
-  const ptyProcess = pty.spawn('copilot', ['--yolo'], {
+  const ptyProcess = pty.spawn('copilot', ['--yolo', '--agent', 'squad'], {
     name: 'xterm-color',
     cols: 120,
     rows: 30,
@@ -189,13 +189,6 @@ export function startCopilotSession(projectId: string, projectPath: string): Ses
     addMessage(managed, 'system', 'Copilot session ended');
     broadcastSessionStatus(session);
   });
-
-  // Auto-activate squad agent after copilot starts
-  setTimeout(() => {
-    if (session.status === 'active') {
-      ptyProcess.write('/agent squad\r');
-    }
-  }, 2000);
 
   session.status = 'active';
   session.pid = ptyProcess.pid;
