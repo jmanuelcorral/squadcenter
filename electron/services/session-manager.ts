@@ -189,7 +189,7 @@ export async function startCopilotSession(projectId: string, projectPath: string
     detectMcpServers(projectPath).catch(() => []),
   ]);
 
-  const ptyProcess = pty.spawn('copilot', ['--yolo', '--agent', 'squad'], {
+  const ptyProcess = pty.spawn('copilot', ['--yolo', '--autopilot', '--allow-all', '--agent', 'squad'], {
     name: 'xterm-color',
     cols: 120,
     rows: 30,
