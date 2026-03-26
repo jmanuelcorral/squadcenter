@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Users } from 'lucide-react';
 import { fetchTeam } from '../lib/api';
 import type { TeamMember } from '@shared/types';
+import CollapsiblePanel from './CollapsiblePanel';
 
 interface SidebarTeamPanelProps {
   projectId: string;
@@ -25,15 +26,15 @@ export default function SidebarTeamPanel({ projectId }: SidebarTeamPanelProps) {
   }, [projectId]);
 
   return (
-    <div className="border-b border-white/5">
-      <div className="flex items-center gap-2 px-4 py-2.5">
-        <Users className="w-3.5 h-3.5 text-slate-400" />
-        <h2 className="text-xs font-semibold text-slate-300">Team</h2>
-        {members.length > 0 && (
-          <span className="ml-auto text-[10px] text-slate-500 font-mono">{members.length}</span>
-        )}
-      </div>
-
+    <CollapsiblePanel
+      title="Team"
+      icon={<Users className="w-3.5 h-3.5" />}
+      badge={
+        members.length > 0 ? (
+          <span className="text-[10px] text-slate-500 font-mono">{members.length}</span>
+        ) : undefined
+      }
+    >
       {error ? (
         <p className="px-4 pb-3 text-[11px] text-slate-500 italic">No team configured</p>
       ) : members.length === 0 ? (
@@ -45,16 +46,11 @@ export default function SidebarTeamPanel({ projectId }: SidebarTeamPanelProps) {
               key={member.name}
               className="flex items-center gap-2.5 rounded-md px-2 py-1.5 hover:bg-white/5 transition-colors"
             >
-              {/* Emoji avatar */}
               <span className="text-sm leading-none">{member.emoji}</span>
-
-              {/* Name + role */}
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-slate-200 truncate">{member.name}</p>
                 <p className="text-[10px] text-slate-500 truncate">{member.role}</p>
               </div>
-
-              {/* Status dot */}
               <div className="flex items-center gap-1.5">
                 <div
                   className={`h-1.5 w-1.5 rounded-full ${statusDot[member.status] ?? 'bg-slate-500'} ${
@@ -66,6 +62,6 @@ export default function SidebarTeamPanel({ projectId }: SidebarTeamPanelProps) {
           ))}
         </div>
       )}
-    </div>
+    </CollapsiblePanel>
   );
 }

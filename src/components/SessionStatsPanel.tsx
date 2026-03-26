@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { ArrowUpFromLine, Zap, MessageCircle, Wrench, RefreshCw } from 'lucide-react';
 import { getSessionStats, refreshSessionStats } from '../lib/api';
 import type { SessionStats } from '../lib/api';
+import CollapsiblePanel from './CollapsiblePanel';
 
 interface SessionStatsPanelProps {
   sessionId: string;
@@ -68,9 +69,9 @@ export default function SessionStatsPanel({ sessionId }: SessionStatsPanelProps)
   }
 
   return (
-    <div className="border-b border-white/5">
-      <div className="flex items-center justify-between px-4 py-2.5">
-        <h2 className="text-xs font-semibold text-slate-300">Session Stats</h2>
+    <CollapsiblePanel
+      title="Session Stats"
+      actions={
         <button
           onClick={handleRefresh}
           disabled={refreshing}
@@ -79,7 +80,8 @@ export default function SessionStatsPanel({ sessionId }: SessionStatsPanelProps)
         >
           <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
         </button>
-      </div>
+      }
+    >
       <div className="grid grid-cols-2 gap-1.5 px-4 pb-3">
         {statCells.map(({ key, label, icon: Icon, color }) => {
           const c = colorMap[color];
@@ -96,6 +98,6 @@ export default function SessionStatsPanel({ sessionId }: SessionStatsPanelProps)
           );
         })}
       </div>
-    </div>
+    </CollapsiblePanel>
   );
 }

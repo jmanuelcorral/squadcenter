@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Plug } from 'lucide-react';
 import { getMcpServers } from '../lib/api';
 import type { McpServer } from '../lib/api';
+import CollapsiblePanel from './CollapsiblePanel';
 
 interface McpServersPanelProps {
   sessionId: string;
@@ -27,49 +28,50 @@ export default function McpServersPanel({ sessionId }: McpServersPanelProps) {
   }, [sessionId]);
 
   return (
-    <div className="border-b border-white/5 px-4 py-3">
-      {/* Header */}
-      <div className="flex items-center gap-2 mb-2">
-        <Plug className="w-3.5 h-3.5 text-slate-400" />
-        <h2 className="text-xs font-semibold text-slate-300">MCP Servers</h2>
-        {!loading && servers.length > 0 && (
-          <span className="ml-auto inline-flex items-center justify-center rounded-full bg-slate-700/60 px-1.5 py-0.5 text-[10px] font-medium text-slate-300 ring-1 ring-white/10">
+    <CollapsiblePanel
+      title="MCP Servers"
+      icon={<Plug className="w-3.5 h-3.5" />}
+      defaultOpen={false}
+      badge={
+        !loading && servers.length > 0 ? (
+          <span className="inline-flex items-center justify-center rounded-full bg-slate-700/60 px-1.5 py-0.5 text-[10px] font-medium text-slate-300 ring-1 ring-white/10">
             {servers.length}
           </span>
+        ) : undefined
+      }
+    >
+      <div className="px-4 pb-3">
+        {loading ? (
+          <div className="space-y-1.5">
+            {[1, 2].map((i) => (
+              <div key={i} className="h-5 rounded bg-slate-800/60 animate-pulse" />
+            ))}
+          </div>
+        ) : servers.length === 0 ? (
+          <p className="text-[11px] text-slate-500 italic">No MCP servers configured</p>
+        ) : (
+          <div className="space-y-1">
+            {servers.map((server) => {
+              const badgeClass = typeBadgeStyles[server.type] ?? typeBadgeStyles.unknown;
+              return (
+                <div key={server.name} className="py-0.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-medium text-slate-200 truncate">{server.name}</span>
+                    <span className={`flex-shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-medium ${badgeClass}`}>
+                      {server.type}
+                    </span>
+                  </div>
+                  {server.command && (
+                    <p className="text-[10px] text-slate-500 truncate">
+                      {server.command} {server.args?.find(a => a.startsWith('@') || !a.startsWith('-')) ?? ''}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
-
-      {/* Content */}
-      {loading ? (
-        <div className="space-y-1.5">
-          {[1, 2].map((i) => (
-            <div key={i} className="h-5 rounded bg-slate-800/60 animate-pulse" />
-          ))}
-        </div>
-      ) : servers.length === 0 ? (
-        <p className="text-[11px] text-slate-500 italic">No MCP servers configured</p>
-      ) : (
-        <div className="space-y-1">
-          {servers.map((server) => {
-            const badgeClass = typeBadgeStyles[server.type] ?? typeBadgeStyles.unknown;
-            return (
-              <div key={server.name} className="py-0.5">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-medium text-slate-200 truncate">{server.name}</span>
-                  <span className={`flex-shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-medium ${badgeClass}`}>
-                    {server.type}
-                  </span>
-                </div>
-                {server.command && (
-                  <p className="text-[10px] text-slate-500 truncate">
-                    {server.command} {server.args?.find(a => a.startsWith('@') || !a.startsWith('-')) ?? ''}
-                  </p>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
+    </CollapsiblePanel>
   );
 }
