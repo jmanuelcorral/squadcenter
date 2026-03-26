@@ -172,3 +172,16 @@ export function watchCopilotSession(
     },
   };
 }
+
+/** One-shot refresh: find session dir, parse events, return stats */
+export async function forceRefreshStats(projectPath: string): Promise<CopilotSessionStats> {
+  console.log(LOG_PREFIX, 'Force refresh for:', projectPath);
+  const sessionDir = await findCopilotSessionDir(projectPath);
+  if (!sessionDir) {
+    console.log(LOG_PREFIX, 'Force refresh: no session dir found');
+    return { outputTokens: 0, premiumRequests: 0, turns: 0, toolCalls: 0, lastUpdated: '' };
+  }
+  console.log(LOG_PREFIX, 'Force refresh: found dir', sessionDir);
+  const eventsPath = path.join(sessionDir, 'events.jsonl');
+  return parseEventsFile(eventsPath);
+}

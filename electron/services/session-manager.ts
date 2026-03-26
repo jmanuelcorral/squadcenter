@@ -4,7 +4,7 @@ import * as pty from 'node-pty';
 import type { Session, SessionMessage } from '../../shared/types.js';
 import { broadcast } from './event-bridge.js';
 import { detectAzureAccount, detectMcpServers, type AzureAccount, type McpServer } from './environment-info.js';
-import { watchCopilotSession, type CopilotSessionStats } from './copilot-log-watcher.js';
+import { watchCopilotSession, forceRefreshStats, type CopilotSessionStats } from './copilot-log-watcher.js';
 
 const MAX_OUTPUT_LINES = 500;
 
@@ -339,6 +339,24 @@ export function cleanupSessions(): void {
 
 export function getSessionStats(sessionId: string): SessionStats | null {
   return sessions.get(sessionId)?.stats ?? null;
+}
+
+export async function refreshSessionStats(sessionId: string): Promise<SessionStats | null> {
+  const managed = sessions.get(sessionId);
+  if (!managed) return null;
+  const projectPath = managed.session.projectPath;
+  const copilotStats = await forceRefreshStats(projectPath);
+  managed.stats = {
+    tokensIn: 0,
+    tokensOut: copilotStats.outputTokens,
+    tokensTotal: copilotStats.outputTokens,
+    premiumRequests: copilotStats.premiumRequests,
+    turns: copilotStats.turns,
+    toolCalls: copilotStats.toolCalls,
+    lastUpdated: copilotStats.lastUpdated,
+  };
+  broadcast('session:stats', { sessionId, stats: managed.stats });
+  return managed.stats;
 }
 
 export function getSessionAzureAccount(sessionId: string): AzureAccount | null {

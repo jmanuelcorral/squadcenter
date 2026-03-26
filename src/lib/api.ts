@@ -204,3 +204,7 @@ export function getAzureAccount(sessionId: string): Promise<AzureAccount | null>
 export function getSessionStats(id: string): Promise<SessionStats | null> {
   return window.electronAPI.invoke('sessions:getStats', { id });
 }
+
+export function refreshSessionStats(id: string): Promise<SessionStats | null> {
+  return window.electronAPI.invoke('sessions:refreshStats', { id });
+}

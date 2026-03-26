@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { ArrowUpFromLine, Zap, MessageCircle, Wrench } from 'lucide-react';
-import { getSessionStats } from '../lib/api';
+import { ArrowUpFromLine, Zap, MessageCircle, Wrench, RefreshCw } from 'lucide-react';
+import { getSessionStats, refreshSessionStats } from '../lib/api';
 import type { SessionStats } from '../lib/api';
 
 interface SessionStatsPanelProps {
@@ -29,6 +29,7 @@ const colorMap: Record<string, { bg: string; icon: string; value: string }> = {
 
 export default function SessionStatsPanel({ sessionId }: SessionStatsPanelProps) {
   const [stats, setStats] = useState<SessionStats | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const cleanupRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
@@ -51,6 +52,15 @@ export default function SessionStatsPanel({ sessionId }: SessionStatsPanelProps)
     };
   }, [sessionId]);
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      const data = await refreshSessionStats(sessionId);
+      if (data) setStats(data);
+    } catch { /* ignore */ }
+    setRefreshing(false);
+  };
+
   function displayValue(key: string): string {
     if (!stats) return '—';
     const v = stats[key as keyof SessionStats] as number;
@@ -59,8 +69,16 @@ export default function SessionStatsPanel({ sessionId }: SessionStatsPanelProps)
 
   return (
     <div className="border-b border-white/5">
-      <div className="flex items-center gap-2 px-4 py-2.5">
+      <div className="flex items-center justify-between px-4 py-2.5">
         <h2 className="text-xs font-semibold text-slate-300">Session Stats</h2>
+        <button
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="p-1 rounded hover:bg-white/10 text-slate-400 hover:text-slate-200 transition-colors disabled:opacity-50"
+          title="Refresh stats"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+        </button>
       </div>
       <div className="grid grid-cols-2 gap-1.5 px-4 pb-3">
         {statCells.map(({ key, label, icon: Icon, color }) => {

@@ -9,6 +9,7 @@ import {
   getSessionOutput,
   getSessionMessages,
   getSessionStats,
+  refreshSessionStats,
   getSessionAzureAccount,
   getSessionMcpServers,
   listSessions,
@@ -67,6 +68,11 @@ export function registerSessionHandlers(ipcMain: IpcMain): void {
   // sessions:getStats — get session token/premium stats
   ipcMain.handle('sessions:getStats', (_event, { id }: { id: string }) => {
     return getSessionStats(id);
+  });
+
+  // sessions:refreshStats — force refresh stats from copilot logs
+  ipcMain.handle('sessions:refreshStats', async (_event, { id }: { id: string }) => {
+    return refreshSessionStats(id);
   });
 
   // sessions:getMcpServers — get cached MCP servers for a session
