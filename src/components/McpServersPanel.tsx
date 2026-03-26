@@ -4,7 +4,7 @@ import { getMcpServers } from '../lib/api';
 import type { McpServer } from '../lib/api';
 
 interface McpServersPanelProps {
-  projectPath: string;
+  sessionId: string;
 }
 
 const typeBadgeStyles: Record<string, string> = {
@@ -13,18 +13,18 @@ const typeBadgeStyles: Record<string, string> = {
   unknown: 'bg-slate-500/15 text-slate-400 ring-1 ring-slate-500/25',
 };
 
-export default function McpServersPanel({ projectPath }: McpServersPanelProps) {
+export default function McpServersPanel({ sessionId }: McpServersPanelProps) {
   const [servers, setServers] = useState<McpServer[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!projectPath) return;
+    if (!sessionId) return;
     setLoading(true);
-    getMcpServers(projectPath)
+    getMcpServers(sessionId)
       .then((data) => setServers(data ?? []))
       .catch(() => setServers([]))
       .finally(() => setLoading(false));
-  }, [projectPath]);
+  }, [sessionId]);
 
   return (
     <div className="border-b border-white/5 px-4 py-3">

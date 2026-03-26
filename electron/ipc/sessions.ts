@@ -9,9 +9,10 @@ import {
   getSessionOutput,
   getSessionMessages,
   getSessionStats,
+  getSessionAzureAccount,
+  getSessionMcpServers,
   listSessions,
 } from '../services/session-manager.js';
-import { detectMcpServers, detectAzureAccount } from '../services/environment-info.js';
 
 export function registerSessionHandlers(ipcMain: IpcMain): void {
   // sessions:list — list all sessions
@@ -28,10 +29,10 @@ export function registerSessionHandlers(ipcMain: IpcMain): void {
   });
 
   // sessions:create — start a new session (shell or copilot via `type` field)
-  ipcMain.handle('sessions:create', (_event, { projectId, projectPath, type }: { projectId: string; projectPath: string; type?: string }) => {
+  ipcMain.handle('sessions:create', async (_event, { projectId, projectPath, type }: { projectId: string; projectPath: string; type?: string }) => {
     if (!projectId || !projectPath) throw new Error('projectId and projectPath are required');
     const session = type === 'copilot'
-      ? startCopilotSession(projectId, projectPath)
+      ? await startCopilotSession(projectId, projectPath)
       : startSession(projectId, projectPath);
     return session;
   });
@@ -68,13 +69,13 @@ export function registerSessionHandlers(ipcMain: IpcMain): void {
     return getSessionStats(id);
   });
 
-  // sessions:getMcpServers — detect MCP server configs for a project
-  ipcMain.handle('sessions:getMcpServers', async (_event, { projectPath }: { projectPath: string }) => {
-    return detectMcpServers(projectPath);
+  // sessions:getMcpServers — get cached MCP servers for a session
+  ipcMain.handle('sessions:getMcpServers', (_event, { sessionId }: { sessionId: string }) => {
+    return getSessionMcpServers(sessionId);
   });
 
-  // sessions:getAzureAccount — detect Azure CLI account info
-  ipcMain.handle('sessions:getAzureAccount', async () => {
-    return detectAzureAccount();
+  // sessions:getAzureAccount — get cached Azure account for a session
+  ipcMain.handle('sessions:getAzureAccount', (_event, { sessionId }: { sessionId: string }) => {
+    return getSessionAzureAccount(sessionId);
   });
 }

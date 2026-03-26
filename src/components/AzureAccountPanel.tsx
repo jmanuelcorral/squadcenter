@@ -29,17 +29,17 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
-export default function AzureAccountPanel() {
+export default function AzureAccountPanel({ sessionId }: { sessionId: string }) {
   const [account, setAccount] = useState<AzureAccount | null>(null);
   const [loading, setLoading] = useState(true);
   const [revealed, setRevealed] = useState(false);
 
   useEffect(() => {
-    getAzureAccount()
+    getAzureAccount(sessionId)
       .then((data) => setAccount(data))
       .catch(() => setAccount(null))
       .finally(() => setLoading(false));
-  }, []);
+  }, [sessionId]);
 
   const stateKey = account?.state ?? 'default';
   const { dot, text } = stateStyles[stateKey] ?? stateStyles.default;

@@ -256,10 +256,10 @@ export default function SessionView() {
             <SidebarTeamPanel projectId={session.projectId} compact />
 
             {/* MCP Servers */}
-            <McpServersPanel projectPath={session.projectPath} />
+            <McpServersPanel sessionId={session.id} />
 
             {/* Azure Account */}
-            <AzureAccountPanel />
+            <AzureAccountPanel sessionId={session.id} />
 
             {/* Activity Timeline */}
             <div className="flex items-center gap-2 px-4 py-2.5 border-b border-white/5">

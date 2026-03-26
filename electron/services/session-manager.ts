@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import * as pty from 'node-pty';
 import type { Session, SessionMessage } from '../../shared/types.js';
 import { broadcast } from './event-bridge.js';
+import { detectAzureAccount, detectMcpServers, type AzureAccount, type McpServer } from './environment-info.js';
 
 const MAX_OUTPUT_LINES = 500;
 
@@ -25,6 +26,8 @@ interface ManagedSession {
   messages: SessionMessage[];
   pty?: pty.IPty;
   stats: SessionStats;
+  azureAccount?: AzureAccount | null;
+  mcpServers?: McpServer[];
 }
 
 const sessions = new Map<string, ManagedSession>();
@@ -161,7 +164,7 @@ export function startSession(projectId: string, projectPath: string): Session {
   return session;
 }
 
-export function startCopilotSession(projectId: string, projectPath: string): Session {
+export async function startCopilotSession(projectId: string, projectPath: string): Promise<Session> {
   const existing = findActiveSessionForProject(projectId);
   if (existing) return existing;
 
@@ -174,6 +177,12 @@ export function startCopilotSession(projectId: string, projectPath: string): Ses
     status: 'starting',
     startedAt: new Date().toISOString(),
   };
+
+  // Detect Azure account and MCP servers BEFORE starting copilot
+  const [azureAccount, mcpServers] = await Promise.all([
+    detectAzureAccount().catch(() => null),
+    detectMcpServers(projectPath).catch(() => []),
+  ]);
 
   const ptyProcess = pty.spawn('copilot', ['--yolo', '--agent', 'squad'], {
     name: 'xterm-color',
@@ -190,6 +199,8 @@ export function startCopilotSession(projectId: string, projectPath: string): Ses
     messages: [],
     pty: ptyProcess,
     stats: createEmptyStats(),
+    azureAccount,
+    mcpServers,
   };
 
   sessions.set(id, managed);
@@ -318,6 +329,14 @@ export function cleanupSessions(): void {
 
 export function getSessionStats(sessionId: string): SessionStats | null {
   return sessions.get(sessionId)?.stats ?? null;
+}
+
+export function getSessionAzureAccount(sessionId: string): AzureAccount | null {
+  return sessions.get(sessionId)?.azureAccount ?? null;
+}
+
+export function getSessionMcpServers(sessionId: string): McpServer[] {
+  return sessions.get(sessionId)?.mcpServers ?? [];
 }
 
 // Strip ANSI escape codes for clean text parsing (CSI, OSC, charset, mode, kitty, 8-bit CSI)

@@ -179,8 +179,8 @@ export interface McpServer {
   url?: string;
 }
 
-export function getMcpServers(projectPath: string): Promise<McpServer[]> {
-  return window.electronAPI.invoke('sessions:getMcpServers', { projectPath });
+export function getMcpServers(sessionId: string): Promise<McpServer[]> {
+  return window.electronAPI.invoke('sessions:getMcpServers', { sessionId });
 }
 
 // Azure Account
@@ -194,8 +194,8 @@ export interface AzureAccount {
   cloudName?: string;
 }
 
-export function getAzureAccount(): Promise<AzureAccount | null> {
-  return window.electronAPI.invoke('sessions:getAzureAccount');
+export function getAzureAccount(sessionId: string): Promise<AzureAccount | null> {
+  return window.electronAPI.invoke('sessions:getAzureAccount', { sessionId });
 }
 
 // Session Stats
