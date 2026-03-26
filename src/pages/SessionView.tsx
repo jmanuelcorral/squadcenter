@@ -142,6 +142,7 @@ export default function SessionView() {
 
   const isActive = session.status === 'active' || session.status === 'starting';
   const isCopilot = session.type === 'copilot';
+  const usePtyMode = isCopilot && isActive;
   const statusClass = statusColors[session.status] ?? statusColors.stopped;
 
   return (
@@ -217,14 +218,28 @@ export default function SessionView() {
         {/* Left: Terminal + Input */}
         <div className="flex flex-1 flex-col min-w-0">
           {/* Terminal */}
-          <SessionTerminal messages={messages} thinking={isCopilot && thinking} />
+          {usePtyMode ? (
+            <SessionTerminal
+              mode="pty"
+              sessionId={session.id}
+              active={isActive}
+            />
+          ) : (
+            <SessionTerminal messages={messages} thinking={isCopilot && thinking} />
+          )}
 
-          {/* Input */}
-          <ChatInput
-            onSend={handleSend}
-            disabled={!isActive || (isCopilot && thinking)}
-            placeholder={isCopilot ? (thinking ? 'Copilot is thinking...' : 'Ask Copilot...') : undefined}
-          />
+          {/* Input — hidden in PTY mode (terminal handles input directly) */}
+          {usePtyMode ? (
+            <div className="flex items-center justify-center border-t border-white/5 bg-slate-900/60 px-4 py-2">
+              <span className="text-[11px] text-slate-500 italic">Terminal is interactive — type directly</span>
+            </div>
+          ) : (
+            <ChatInput
+              onSend={handleSend}
+              disabled={!isActive || (isCopilot && thinking)}
+              placeholder={isCopilot ? (thinking ? 'Copilot is thinking...' : 'Ask Copilot...') : undefined}
+            />
+          )}
         </div>
 
         {/* Right: Activity Timeline (collapsible) */}

@@ -3,6 +3,7 @@ import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
 import type { SessionMessage } from '../lib/api';
+import { resizeSession } from '../lib/api';
 
 // ANSI color codes
 const GREEN = '\x1b[38;2;52;211;153m';   // emerald-400
@@ -14,12 +15,49 @@ const DIM = '\x1b[2m';
 const ITALIC = '\x1b[3m';
 
 interface SessionTerminalProps {
-  messages: SessionMessage[];
+  // Message mode (existing)
+  messages?: SessionMessage[];
   loading?: boolean;
   thinking?: boolean;
+  // PTY mode (new)
+  sessionId?: string;
+  active?: boolean;
+  mode?: 'messages' | 'pty';
 }
 
-export default function SessionTerminal({ messages, loading, thinking }: SessionTerminalProps) {
+const TERM_THEME = {
+  background: '#0d1117',
+  foreground: '#c9d1d9',
+  cursor: '#58a6ff',
+  cursorAccent: '#0d1117',
+  selectionBackground: '#264f78',
+  selectionForeground: '#ffffff',
+  black: '#0d1117',
+  red: '#ff7b72',
+  green: '#34d399',
+  yellow: '#fbbf24',
+  blue: '#58a6ff',
+  magenta: '#a78bfa',
+  cyan: '#56d4dd',
+  white: '#c9d1d9',
+  brightBlack: '#484f58',
+  brightRed: '#ffa198',
+  brightGreen: '#6ee7b7',
+  brightYellow: '#fde68a',
+  brightBlue: '#79c0ff',
+  brightMagenta: '#c4b5fd',
+  brightCyan: '#76e4f7',
+  brightWhite: '#f0f6fc',
+};
+
+export default function SessionTerminal({
+  messages = [],
+  loading,
+  thinking,
+  sessionId,
+  active,
+  mode = 'messages',
+}: SessionTerminalProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
@@ -27,13 +65,14 @@ export default function SessionTerminal({ messages, loading, thinking }: Session
   const thinkingLineRef = useRef(false);
   const thinkingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const isPty = mode === 'pty';
+
   const clearThinking = useCallback(() => {
     if (thinkingIntervalRef.current) {
       clearInterval(thinkingIntervalRef.current);
       thinkingIntervalRef.current = null;
     }
     if (thinkingLineRef.current && terminalRef.current) {
-      // Clear the thinking line: move to start, clear line
       terminalRef.current.write('\r\x1b[2K');
       thinkingLineRef.current = false;
     }
@@ -44,39 +83,21 @@ export default function SessionTerminal({ messages, loading, thinking }: Session
     if (!containerRef.current) return;
 
     const term = new Terminal({
-      cursorBlink: false,
+      cursorBlink: isPty,
       cursorStyle: 'bar',
-      cursorInactiveStyle: 'none',
-      disableStdin: true,
+      cursorInactiveStyle: isPty ? 'outline' : 'none',
+      disableStdin: !isPty,
       fontFamily: "'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'SF Mono', Menlo, Monaco, 'Courier New', monospace",
       fontSize: 13,
       lineHeight: 1.5,
       letterSpacing: 0,
       theme: {
-        background: '#0d1117',
-        foreground: '#c9d1d9',
-        cursor: '#0d1117',
-        selectionBackground: '#264f78',
-        selectionForeground: '#ffffff',
-        black: '#0d1117',
-        red: '#ff7b72',
-        green: '#34d399',
-        yellow: '#fbbf24',
-        blue: '#58a6ff',
-        magenta: '#a78bfa',
-        cyan: '#56d4dd',
-        white: '#c9d1d9',
-        brightBlack: '#484f58',
-        brightRed: '#ffa198',
-        brightGreen: '#6ee7b7',
-        brightYellow: '#fde68a',
-        brightBlue: '#79c0ff',
-        brightMagenta: '#c4b5fd',
-        brightCyan: '#76e4f7',
-        brightWhite: '#f0f6fc',
+        ...TERM_THEME,
+        // In message mode, hide cursor by matching background
+        cursor: isPty ? '#58a6ff' : '#0d1117',
       },
       scrollback: 5000,
-      convertEol: true,
+      convertEol: !isPty, // PTY handles its own line endings
       allowProposedApi: true,
     });
 
@@ -84,7 +105,6 @@ export default function SessionTerminal({ messages, loading, thinking }: Session
     term.loadAddon(fitAddon);
     term.open(containerRef.current);
 
-    // Small delay to let the container stabilize before first fit
     requestAnimationFrame(() => {
       try { fitAddon.fit(); } catch { /* container not ready */ }
     });
@@ -99,11 +119,47 @@ export default function SessionTerminal({ messages, loading, thinking }: Session
     };
     window.addEventListener('resize', handleResize);
 
-    // Also observe container size changes (e.g. sidebar collapse)
     const resizeObserver = new ResizeObserver(() => {
       requestAnimationFrame(handleResize);
     });
     resizeObserver.observe(containerRef.current);
+
+    // --- PTY mode setup ---
+    let cleanupPtyListener: (() => void) | undefined;
+    let cleanupDataListener: ReturnType<typeof term.onData> | undefined;
+    let cleanupResizeListener: ReturnType<typeof term.onResize> | undefined;
+
+    if (isPty && sessionId) {
+      // Listen for PTY data from backend
+      cleanupPtyListener = window.electronAPI.on(
+        'event:session:ptyData',
+        (payload: { sessionId: string; data: string }) => {
+          if (payload.sessionId === sessionId) {
+            term.write(payload.data);
+          }
+        },
+      );
+
+      // Forward user keystrokes to backend
+      cleanupDataListener = term.onData((data: string) => {
+        window.electronAPI.invoke('sessions:sendInput', { id: sessionId, text: data });
+      });
+
+      // Forward resize events to backend
+      cleanupResizeListener = term.onResize(({ cols, rows }) => {
+        resizeSession(sessionId, cols, rows);
+      });
+
+      // Send initial size after fit
+      requestAnimationFrame(() => {
+        try {
+          fitAddon.fit();
+          resizeSession(sessionId, term.cols, term.rows);
+        } catch { /* ignore */ }
+      });
+
+      term.focus();
+    }
 
     return () => {
       window.removeEventListener('resize', handleResize);
@@ -111,21 +167,37 @@ export default function SessionTerminal({ messages, loading, thinking }: Session
       if (thinkingIntervalRef.current) {
         clearInterval(thinkingIntervalRef.current);
       }
+      cleanupPtyListener?.();
+      cleanupDataListener?.dispose();
+      cleanupResizeListener?.dispose();
       term.dispose();
       terminalRef.current = null;
       fitAddonRef.current = null;
     };
-  }, []);
+  }, [isPty, sessionId]);
 
-  // Write new messages to terminal
+  // PTY mode: handle active→inactive transition
   useEffect(() => {
+    if (!isPty) return;
+    const term = terminalRef.current;
+    if (!term) return;
+
+    if (active === false) {
+      term.options.disableStdin = true;
+      term.options.cursorBlink = false;
+      term.write(`\r\n${DIM}${ITALIC}${AMBER}── Session ended ──${RESET}\r\n`);
+    }
+  }, [isPty, active]);
+
+  // Message mode: write new messages to terminal
+  useEffect(() => {
+    if (isPty) return;
     const term = terminalRef.current;
     if (!term) return;
 
     const newMessages = messages.slice(writtenCountRef.current);
     if (newMessages.length === 0) return;
 
-    // Clear thinking indicator before writing new content
     clearThinking();
 
     for (const msg of newMessages) {
@@ -133,10 +205,11 @@ export default function SessionTerminal({ messages, loading, thinking }: Session
     }
 
     writtenCountRef.current = messages.length;
-  }, [messages, clearThinking]);
+  }, [isPty, messages, clearThinking]);
 
-  // Handle thinking indicator
+  // Message mode: handle thinking indicator
   useEffect(() => {
+    if (isPty) return;
     const term = terminalRef.current;
     if (!term) return;
 
@@ -155,7 +228,7 @@ export default function SessionTerminal({ messages, loading, thinking }: Session
     } else {
       clearThinking();
     }
-  }, [thinking, clearThinking]);
+  }, [isPty, thinking, clearThinking]);
 
   if (loading) {
     return (

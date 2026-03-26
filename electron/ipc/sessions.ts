@@ -4,6 +4,7 @@ import {
   startCopilotSession,
   stopSession,
   sendInput,
+  resizeSession,
   getSession,
   getSessionOutput,
   getSessionMessages,
@@ -52,5 +53,11 @@ export function registerSessionHandlers(ipcMain: IpcMain): void {
     const session = getSession(id);
     if (!session) throw new Error('Session not found');
     return getSessionOutput(id);
+  });
+
+  // sessions:resize — resize PTY
+  ipcMain.handle('sessions:resize', (_event, { id, cols, rows }: { id: string; cols: number; rows: number }) => {
+    resizeSession(id, cols, rows);
+    return { ok: true };
   });
 }

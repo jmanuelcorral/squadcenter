@@ -6,6 +6,7 @@ type EventType =
   | 'agent-status-changed'
   | 'session:output'
   | 'session:status'
+  | 'session:ptyData'
   | 'hook:event';
 
 let mainWindow: BrowserWindow | null = null;

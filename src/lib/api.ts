@@ -153,6 +153,10 @@ export function getHookActivitySummary(projectId: string): Promise<Record<string
   return window.electronAPI.invoke('hooks:getActivity', { projectId });
 }
 
+export function resizeSession(id: string, cols: number, rows: number): Promise<{ ok: boolean }> {
+  return window.electronAPI.invoke('sessions:resize', { id, cols, rows });
+}
+
 export function setupProjectHooks(projectId: string): Promise<{ success: boolean; hooksPath: string }> {
   return window.electronAPI.invoke('projects:setupHooks', { id: projectId });
 }
