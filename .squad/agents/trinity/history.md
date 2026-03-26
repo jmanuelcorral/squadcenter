@@ -139,3 +139,56 @@ Migrated the entire React frontend from `client/src/` to `src/` and rewired all 
 - IPC channel naming uses colon-separated namespaces matching main process handlers (`projects:list`, `sessions:create`, etc.)
 - Old `client/` directory left untouched — cleanup is a separate task
 - No changes to `package.json` or `vite.config.ts` — Morpheus handles build config
+
+### 2025-07-19 — xterm.js Terminal Migration
+
+Replaced custom HTML-based `SessionTerminal` with xterm.js for proper terminal rendering:
+
+- **Dependencies:** Added `@xterm/xterm` (v5+) and `@xterm/addon-fit` to `package.json`
+- **SessionTerminal.tsx:** Full rewrite — `Terminal` instance mounted to div ref, `FitAddon` for responsive resize, `ResizeObserver` for container changes (sidebar collapse). Read-only (`disableStdin: true`). ANSI color codes for message types: green for input (`> ` prefix), passthrough for output (xterm handles native ANSI from Copilot CLI), amber italic for system messages
+- **Thinking indicator:** Animated dots rendered directly in terminal via `setInterval` writing ANSI — violet "✨ Copilot is thinking..." with cycling dots, cleared before new messages arrive
+- **Message tracking:** `writtenCountRef` tracks messages already written to xterm, only new messages from props are appended (avoids re-rendering entire history)
+- **Theme:** Dark `#0d1117` background matching existing design, GitHub-style color palette, Cascadia Code / Fira Code / JetBrains Mono font stack
+- **SessionView.tsx:** No changes needed — props interface (`messages`, `loading`, `thinking`) preserved exactly
+- **ChatInput.tsx:** Unchanged — stays separate, user types there, xterm is display-only
+- **Build:** Vite production build passes — 640 KB JS + 58 KB CSS (xterm.js adds ~340 KB uncompressed, ~80 KB gzipped)
+
+**Key decisions:**
+- xterm.js is display-only (no stdin) — keyboard input stays in ChatInput component
+- Used `@xterm/xterm` v5+ namespace (not legacy `xterm` package)
+- ResizeObserver + window resize listener for responsive fit
+- Thinking animation uses terminal ANSI writes (not DOM overlay) for visual consistency
+- Loading skeleton kept as HTML (outside xterm) since terminal isn't initialized yet
+- `convertEol: true` handles `\n` → `\r\n` conversion for proper line breaks
+
+### 2025-07-21 — Interactive PTY Terminal Mode
+
+Added dual-mode terminal support for live interactive Copilot sessions (3 modified files):
+
+- **SessionTerminal.tsx:** Refactored to support `mode: 'messages' | 'pty'`. PTY mode enables stdin, blinking cursor, `convertEol: false` (PTY handles line endings), listens for `event:session:ptyData` IPC events writing raw data to xterm, forwards `term.onData` keystrokes via `sessions:sendInput`, sends `sessions:resize` on fit/resize. Cleans up all IPC listeners and xterm disposables on unmount. On `active→false`, disables stdin and prints session-ended message. Theme extracted to `TERM_THEME` const shared by both modes
+- **SessionView.tsx:** Added `usePtyMode` flag (`isCopilot && isActive`). PTY mode renders `<SessionTerminal mode="pty">` and replaces ChatInput with subtle "Terminal is interactive" hint. Message mode preserved for stopped/history/shell sessions
+- **api.ts:** Added `resizeSession(id, cols, rows)` IPC wrapper for `sessions:resize`
+- **TypeScript:** Clean compile, zero errors
+
+**Key decisions:**
+- PTY data listener is per-component (not in `useIpcEvents`) to avoid accumulating raw terminal data in React state
+- `convertEol` toggled by mode — message mode needs `true` for `\n`→`\r\n`, PTY mode needs `false` since the PTY handles it
+- Terminal re-initializes when `isPty` or `sessionId` changes (useEffect deps) to properly switch modes
+- Cursor color switches: blue `#58a6ff` in PTY mode (visible), background-matching in message mode (hidden)
+- IPC contract: `event:session:ptyData` for raw output, `sessions:sendInput` for keystrokes, `sessions:resize` for dimensions
+
+### 2025-07-21 — Session Sidebar Panels (Stats + Team + Activity)
+
+Added three stacked panels to the SessionView right sidebar (2 new components, 2 modified files):
+
+- **API layer (`lib/api.ts`):** Added `SessionStats` interface (`tokensIn`, `tokensOut`, `tokensTotal`, `premiumRequests`, `lastUpdated`) and `getSessionStats(id)` IPC wrapper for `sessions:getStats`
+- **SessionStatsPanel.tsx:** Compact metrics panel — Coins icon for tokens (cyan), Zap icon for premium requests (amber). Fetches initial stats via `getSessionStats()`, subscribes to `event:session:stats` IPC events directly (not via `useIpcEvents` — avoids state accumulation). Formats large numbers (1k, 1M). Shows "—" for zero values. `font-mono` for numbers, transition animation on updates
+- **SidebarTeamPanel.tsx:** Compact team roster for sidebar — fetches via existing `fetchTeam()`, renders emoji + name + role + status dot per member. Working status gets `animate-pulse`. Shows "No team configured" on empty/error. Uses `Users` icon header with member count badge
+- **SessionView.tsx:** Right sidebar now stacks three panels: SessionStatsPanel → SidebarTeamPanel → ActivityTimeline. Added `overflow-y-auto` on sidebar container. Imported both new components
+- **Named `SidebarTeamPanel`** (not `TeamPanel`) to avoid collision with existing `TeamPanel.tsx` which takes `members` prop directly — sidebar version handles its own data fetching
+
+**Key decisions:**
+- `event:session:stats` listener is per-component (same pattern as `event:session:ptyData`) to avoid accumulating stats in `useIpcEvents` state array
+- SidebarTeamPanel is a separate component from the existing TeamPanel — different data flow (self-fetching vs prop-driven) and different layout (compact sidebar vs expandable detail)
+- Sidebar container gets `overflow-y-auto` so panels can scroll if content exceeds viewport
+- TypeScript compiles cleanly with zero errors

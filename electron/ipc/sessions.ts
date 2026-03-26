@@ -8,6 +8,7 @@ import {
   getSession,
   getSessionOutput,
   getSessionMessages,
+  getSessionStats,
   listSessions,
 } from '../services/session-manager.js';
 
@@ -59,5 +60,10 @@ export function registerSessionHandlers(ipcMain: IpcMain): void {
   ipcMain.handle('sessions:resize', (_event, { id, cols, rows }: { id: string; cols: number; rows: number }) => {
     resizeSession(id, cols, rows);
     return { ok: true };
+  });
+
+  // sessions:getStats — get session token/premium stats
+  ipcMain.handle('sessions:getStats', (_event, { id }: { id: string }) => {
+    return getSessionStats(id);
   });
 }

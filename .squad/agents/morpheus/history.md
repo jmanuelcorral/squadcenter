@@ -109,3 +109,40 @@
 - IPC contract matches the agreed spec exactly — same data shapes as Express routes
 - Did NOT delete server/ or client/ directories — cleanup is a separate step
 - Did NOT modify client/src/ — that's Trinity's domain
+
+### 2025-07-19 — Refactored Copilot sessions to use node-pty for real PTY
+- **Problem:** `copilot -p "msg"` one-shot mode lost all interactive TUI features. User wanted a real persistent terminal running `copilot` as an interactive PTY.
+- **Solution:** Installed `node-pty` and refactored `startCopilotSession()` to spawn a real PTY via `pty.spawn('copilot', [])` with xterm-color terminal.
+- Added `pty?: pty.IPty` field to `ManagedSession` interface.
+- PTY `onData` streams raw terminal data via new `session:ptyData` broadcast event — frontend (xterm.js) renders it directly.
+- PTY `onExit` updates session status to 'stopped'.
+- `sendInput()` for copilot sessions now writes raw data directly to `pty.write(text)` — no newline appending, no structured messages. Frontend sends `\r` for enter.
+- `stopSession()` for copilot sessions calls `pty.kill()` instead of killing a child process.
+- New `resizeSession(sessionId, cols, rows)` exported function calls `pty.resize()` for dynamic terminal resizing.
+- New IPC handler `sessions:resize` in `electron/ipc/sessions.ts` exposes resize to renderer.
+- Added `session:ptyData` to EventType union in `event-bridge.ts`.
+- Externalized `node-pty` in `vite.config.ts` rollupOptions so Vite doesn't try to bundle the native module.
+- Removed old `sendCopilotPrompt()`, `parseStderrStats()`, and `busy`/`currentChild` fields — all replaced by PTY.
+- Shell sessions (`startSession()`) completely untouched — zero behavioral change.
+- **IPC contract for Trinity:**
+  - `event:session:ptyData` → `{ sessionId: string, data: string }` (raw PTY output)
+  - `sessions:resize` → `{ id: string, cols: number, rows: number }` (resize PTY)
+  - `sessions:sendInput` → `{ id: string, text: string }` (raw input, no \n appended for copilot)
+- Build succeeds with zero errors.
+
+### 2025-07-19 — Added PTY stats tracking for token/premium request consumption
+- **Problem:** Copilot CLI outputs token usage and premium request stats in the PTY data stream, but we weren't capturing them.
+- **Solution:** Added line-buffered parsing of the PTY output to extract stats and broadcast them to the frontend.
+- Added `SessionStats` interface (`tokensIn`, `tokensOut`, `tokensTotal`, `premiumRequests`, `lastUpdated`) and `stats` field to `ManagedSession`, initialized with zeros via `createEmptyStats()`.
+- PTY `onData` handler now buffers partial lines (`lineBuffer`) and feeds complete lines to `parseStatsLine()` — handles chunk-boundary splits correctly.
+- `parseStatsLine()` strips ANSI escape codes, then matches multiple regex patterns:
+  - `N tokens` / `tokens: N` / `tokens used: N` → sets `tokensTotal`
+  - `N in, M out` → sets `tokensIn`, `tokensOut`, recomputes `tokensTotal`
+  - `N premium request(s)` / `premium requests: N` → sets `premiumRequests`
+  - `requests this session: N` / `requests used: N` → sets `premiumRequests`
+- On any match, broadcasts `session:stats` event with updated stats to the renderer.
+- Added `'session:stats'` to EventType union in `event-bridge.ts`.
+- New `getSessionStats(sessionId)` export returns stats for a session (or null).
+- New `sessions:getStats` IPC handler in `electron/ipc/sessions.ts` exposes stats to renderer.
+- **Decision:** Only count what Copilot reports — no increment-per-prompt heuristic. Each prompt doesn't necessarily equal one premium request.
+- Build succeeds with zero errors.

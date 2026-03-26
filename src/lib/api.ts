@@ -44,6 +44,15 @@ export interface BrowseResult {
   entries: DirectoryEntry[];
 }
 
+// Session Stats (token consumption + premium requests)
+export interface SessionStats {
+  tokensIn: number;
+  tokensOut: number;
+  tokensTotal: number;
+  premiumRequests: number;
+  lastUpdated: string;
+}
+
 // Hook Events (Copilot CLI hooks monitoring)
 export type HookEventType = 'sessionStart' | 'sessionEnd' | 'userPromptSubmitted' | 'preToolUse' | 'postToolUse' | 'errorOccurred';
 
@@ -159,4 +168,9 @@ export function resizeSession(id: string, cols: number, rows: number): Promise<{
 
 export function setupProjectHooks(projectId: string): Promise<{ success: boolean; hooksPath: string }> {
   return window.electronAPI.invoke('projects:setupHooks', { id: projectId });
+}
+
+// Session Stats
+export function getSessionStats(id: string): Promise<SessionStats | null> {
+  return window.electronAPI.invoke('sessions:getStats', { id });
 }

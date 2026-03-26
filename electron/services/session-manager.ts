@@ -6,12 +6,25 @@ import { broadcast } from './event-bridge.js';
 
 const MAX_OUTPUT_LINES = 500;
 
+export interface SessionStats {
+  tokensIn: number;
+  tokensOut: number;
+  tokensTotal: number;
+  premiumRequests: number;
+  lastUpdated: string;
+}
+
+function createEmptyStats(): SessionStats {
+  return { tokensIn: 0, tokensOut: 0, tokensTotal: 0, premiumRequests: 0, lastUpdated: '' };
+}
+
 interface ManagedSession {
   session: Session;
   process: ChildProcess;
   outputBuffer: string[];
   messages: SessionMessage[];
   pty?: pty.IPty;
+  stats: SessionStats;
 }
 
 const sessions = new Map<string, ManagedSession>();
@@ -133,6 +146,7 @@ export function startSession(projectId: string, projectPath: string): Session {
     process: child,
     outputBuffer: [],
     messages: [],
+    stats: createEmptyStats(),
   };
 
   sessions.set(id, managed);
@@ -175,12 +189,22 @@ export function startCopilotSession(projectId: string, projectPath: string): Ses
     outputBuffer: [],
     messages: [],
     pty: ptyProcess,
+    stats: createEmptyStats(),
   };
 
   sessions.set(id, managed);
 
+  let lineBuffer = '';
   ptyProcess.onData((data: string) => {
     broadcast('session:ptyData', { sessionId: id, data });
+
+    // Buffer partial lines and parse complete ones for stats
+    lineBuffer += data;
+    const lines = lineBuffer.split('\n');
+    lineBuffer = lines.pop() ?? '';
+    for (const line of lines) {
+      parseStatsLine(managed, line, id);
+    }
   });
 
   ptyProcess.onExit(() => {
@@ -283,5 +307,61 @@ export function cleanupSessions(): void {
     if (managed.session.status === 'stopped' || managed.session.status === 'error') {
       sessions.delete(id);
     }
+  }
+}
+
+export function getSessionStats(sessionId: string): SessionStats | null {
+  return sessions.get(sessionId)?.stats ?? null;
+}
+
+// Strip ANSI escape codes for clean text parsing
+const ANSI_RE = /\x1b\[[0-9;]*[A-Za-z]|\x1b\].*?(?:\x07|\x1b\\)/g;
+
+function parseStatsLine(managed: ManagedSession, line: string, sessionId: string): void {
+  const clean = line.replace(ANSI_RE, '').trim();
+  if (!clean) return;
+
+  let changed = false;
+
+  // Match "N tokens" or "tokens: N" or "Tokens used: N"
+  const tokenMatch = clean.match(/(\d[\d,]*)\s*tokens?\b/i)
+    || clean.match(/tokens?\s*(?:used|total|count)?[:\s]+(\d[\d,]*)/i);
+  if (tokenMatch) {
+    managed.stats.tokensTotal = parseInt(tokenMatch[1].replace(/,/g, ''), 10);
+    changed = true;
+  }
+
+  // Match "N in, M out" token breakdown (e.g. "Tokens: 1234 in, 5678 out")
+  const inOutMatch = clean.match(/(\d[\d,]*)\s*in\b.*?(\d[\d,]*)\s*out\b/i);
+  if (inOutMatch) {
+    managed.stats.tokensIn = parseInt(inOutMatch[1].replace(/,/g, ''), 10);
+    managed.stats.tokensOut = parseInt(inOutMatch[2].replace(/,/g, ''), 10);
+    managed.stats.tokensTotal = managed.stats.tokensIn + managed.stats.tokensOut;
+    changed = true;
+  }
+
+  // Match premium request patterns: "N premium request(s)", "premium requests: N", "N/M premium"
+  const premiumMatch = clean.match(/premium\s*request/i);
+  if (premiumMatch) {
+    const countMatch = clean.match(/(\d[\d,]*)\s*(?:\/\s*\d[\d,]*)?\s*premium/i)
+      || clean.match(/premium[^:]*:\s*(\d[\d,]*)/i);
+    if (countMatch) {
+      managed.stats.premiumRequests = parseInt(countMatch[1].replace(/,/g, ''), 10);
+    } else {
+      managed.stats.premiumRequests++;
+    }
+    changed = true;
+  }
+
+  // Match "requests this session: N" or "requests used: N" or "requests consumed: N"
+  const requestMatch = clean.match(/requests?\s*(?:this\s+session|used|consumed)[:\s]*(\d[\d,]*)/i);
+  if (requestMatch) {
+    managed.stats.premiumRequests = parseInt(requestMatch[1].replace(/,/g, ''), 10);
+    changed = true;
+  }
+
+  if (changed) {
+    managed.stats.lastUpdated = new Date().toISOString();
+    broadcast('session:stats', { sessionId, stats: managed.stats });
   }
 }

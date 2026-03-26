@@ -7,6 +7,8 @@ import { useIpcEvents } from '../hooks/useIpcEvents';
 import SessionTerminal from '../components/SessionTerminal';
 import ChatInput from '../components/ChatInput';
 import ActivityTimeline from '../components/ActivityTimeline';
+import SessionStatsPanel from '../components/SessionStatsPanel';
+import SidebarTeamPanel from '../components/SidebarTeamPanel';
 
 const statusColors: Record<string, string> = {
   starting: 'bg-amber-500/10 text-amber-400 ring-amber-500/30',
@@ -242,9 +244,16 @@ export default function SessionView() {
           )}
         </div>
 
-        {/* Right: Activity Timeline (collapsible) */}
+        {/* Right: Stats + Team + Activity Timeline (collapsible) */}
         {showActivity && session.projectId && (
-          <div className="hidden md:flex w-80 flex-col border-l border-white/5 bg-slate-900/60">
+          <div className="hidden md:flex w-80 flex-col border-l border-white/5 bg-slate-900/60 overflow-y-auto">
+            {/* Session Stats */}
+            <SessionStatsPanel sessionId={session.id} />
+
+            {/* Team */}
+            <SidebarTeamPanel projectId={session.projectId} compact />
+
+            {/* Activity Timeline */}
             <div className="flex items-center gap-2 px-4 py-2.5 border-b border-white/5">
               <span className="relative flex h-2 w-2">
                 <span className="absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75 animate-ping" />

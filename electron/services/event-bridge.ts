@@ -7,6 +7,7 @@ type EventType =
   | 'session:output'
   | 'session:status'
   | 'session:ptyData'
+  | 'session:stats'
   | 'hook:event';
 
 let mainWindow: BrowserWindow | null = null;
