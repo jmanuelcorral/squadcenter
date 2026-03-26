@@ -195,12 +195,21 @@ export interface SubagentSpawn {
   result?: string;
 }
 
+export interface MemberActivity {
+  name: string;
+  status: 'idle' | 'working' | 'done';
+  subagents: SubagentSpawn[];
+  toolCalls: AgentToolCall[];
+  lastActiveAt?: string;
+}
+
 export interface AgentActivity {
   isActive: boolean;
   currentTurnStart?: string;
   agentName?: string;
   toolCalls: AgentToolCall[];
   subagents: SubagentSpawn[];
+  members: Record<string, MemberActivity>;
   lastUpdated: string;
 }
 

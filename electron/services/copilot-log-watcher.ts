@@ -33,12 +33,21 @@ export interface SubagentSpawn {
   result?: string;
 }
 
+export interface MemberActivity {
+  name: string;
+  status: 'idle' | 'working' | 'done';
+  subagents: SubagentSpawn[];
+  toolCalls: AgentToolCall[];
+  lastActiveAt?: string;
+}
+
 export interface AgentActivity {
   isActive: boolean;
   currentTurnStart?: string;
   agentName?: string;
   toolCalls: AgentToolCall[];
   subagents: SubagentSpawn[];
+  members: Record<string, MemberActivity>;
   lastUpdated: string;
 }
 
@@ -119,8 +128,18 @@ function createEmptyActivity(): AgentActivity {
     isActive: false,
     toolCalls: [],
     subagents: [],
+    members: {},
     lastUpdated: '',
   };
+}
+
+function extractMemberName(description: string): string | null {
+  if (!description) return null;
+  // Strip leading emoji / non-word characters (handles multi-byte unicode)
+  const cleaned = description.replace(/^[^\p{L}\p{N}_]+/u, '').trim();
+  if (!cleaned) return null;
+  const match = cleaned.match(/^(\w+)[\s:]/);
+  return match ? match[1] : null;
 }
 
 function truncate(text: string, max: number): string {
@@ -233,6 +252,41 @@ export async function parseAgentActivity(eventsPath: string): Promise<AgentActiv
     activity.agentName = agentName;
     activity.toolCalls = Array.from(toolCallMap.values()).reverse();
     activity.subagents = Array.from(subagentMap.values()).reverse();
+
+    // Group subagents by team member
+    const membersMap: Record<string, MemberActivity> = {};
+    for (const spawn of activity.subagents) {
+      const memberName = extractMemberName(spawn.description) ?? 'Unknown';
+      const key = memberName.toLowerCase();
+      if (!membersMap[key]) {
+        membersMap[key] = {
+          name: memberName,
+          status: 'idle',
+          subagents: [],
+          toolCalls: [],
+        };
+      }
+      membersMap[key].subagents.push(spawn);
+
+      // Track most recent timestamp for lastActiveAt
+      const latestTs = spawn.endTime ?? spawn.startTime;
+      if (latestTs && (!membersMap[key].lastActiveAt || latestTs > membersMap[key].lastActiveAt!)) {
+        membersMap[key].lastActiveAt = latestTs;
+      }
+    }
+
+    // Determine member status
+    for (const member of Object.values(membersMap)) {
+      const hasRunning = member.subagents.some(s => s.status === 'running');
+      if (hasRunning) {
+        member.status = 'working';
+      } else if (member.subagents.length > 0) {
+        member.status = 'done';
+      }
+      // else stays 'idle' (shouldn't happen since we only create entries from subagents)
+    }
+    activity.members = membersMap;
+
     activity.lastUpdated = new Date().toISOString();
   } catch { /* file not readable */ }
 
