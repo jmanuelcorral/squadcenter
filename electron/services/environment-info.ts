@@ -6,6 +6,7 @@ export interface McpServer {
   name: string;
   type: string; // "stdio" | "sse" | "unknown"
   command?: string;
+  args?: string[];
   url?: string;
 }
 
@@ -15,6 +16,8 @@ export interface AzureAccount {
   tenantName?: string;
   subscriptionId?: string;
   subscriptionName?: string;
+  state?: string;        // "Enabled", "Disabled", etc.
+  cloudName?: string;    // "AzureCloud", "AzureUSGovernment", etc.
 }
 
 export async function detectMcpServers(projectPath: string): Promise<McpServer[]> {
@@ -24,7 +27,10 @@ export async function detectMcpServers(projectPath: string): Promise<McpServer[]
     path.join(projectPath, '.copilot', 'mcp.json'),
     path.join(projectPath, '.copilot', 'mcp-config.json'),
     path.join(projectPath, '.vscode', 'mcp.json'),
+    path.join(projectPath, '.vscode', 'settings.json'),
     path.join(process.env.USERPROFILE || process.env.HOME || '', '.copilot', 'mcp.json'),
+    path.join(process.env.USERPROFILE || process.env.HOME || '', '.copilot', 'mcp-config.json'),
+    path.join(process.env.APPDATA || '', 'github-copilot', 'mcp.json'),
   ];
 
   for (const configPath of configPaths) {
@@ -32,7 +38,7 @@ export async function detectMcpServers(projectPath: string): Promise<McpServer[]
       const content = await readFile(configPath, 'utf-8');
       const config = JSON.parse(content);
 
-      const serversObj = config.servers || config.mcpServers || {};
+      const serversObj = config.servers || config.mcpServers || config.mcp?.servers || config.mcp?.mcpServers || {};
 
       for (const [name, serverConfig] of Object.entries(serversObj)) {
         const sc = serverConfig as Record<string, unknown>;
@@ -40,6 +46,7 @@ export async function detectMcpServers(projectPath: string): Promise<McpServer[]
           name,
           type: (sc.type as string) || (sc.command ? 'stdio' : sc.url ? 'sse' : 'unknown'),
           command: sc.command as string | undefined,
+          args: sc.args as string[] | undefined,
           url: sc.url as string | undefined,
         });
       }
@@ -72,6 +79,8 @@ export async function detectAzureAccount(): Promise<AzureAccount | null> {
           tenantName: account.tenantDisplayName || '',
           subscriptionId: account.id || '',
           subscriptionName: account.name || '',
+          state: account.state || '',
+          cloudName: account.environmentName || '',
         });
       } catch {
         resolve(null);

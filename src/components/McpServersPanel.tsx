@@ -53,11 +53,18 @@ export default function McpServersPanel({ projectPath }: McpServersPanelProps) {
           {servers.map((server) => {
             const badgeClass = typeBadgeStyles[server.type] ?? typeBadgeStyles.unknown;
             return (
-              <div key={server.name} className="flex items-center justify-between gap-2 py-0.5">
-                <span className="text-xs font-medium text-slate-200 truncate">{server.name}</span>
-                <span className={`flex-shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-medium ${badgeClass}`}>
-                  {server.type}
-                </span>
+              <div key={server.name} className="py-0.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-medium text-slate-200 truncate">{server.name}</span>
+                  <span className={`flex-shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-medium ${badgeClass}`}>
+                    {server.type}
+                  </span>
+                </div>
+                {server.command && (
+                  <p className="text-[10px] text-slate-500 truncate">
+                    {server.command} {server.args?.find(a => a.startsWith('@') || !a.startsWith('-')) ?? ''}
+                  </p>
+                )}
               </div>
             );
           })}

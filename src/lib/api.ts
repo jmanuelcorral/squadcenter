@@ -175,6 +175,7 @@ export interface McpServer {
   name: string;
   type: string;
   command?: string;
+  args?: string[];
   url?: string;
 }
 
@@ -189,6 +190,8 @@ export interface AzureAccount {
   tenantName?: string;
   subscriptionId?: string;
   subscriptionName?: string;
+  state?: string;
+  cloudName?: string;
 }
 
 export function getAzureAccount(): Promise<AzureAccount | null> {
