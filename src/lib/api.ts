@@ -136,12 +136,8 @@ export function getSession(id: string): Promise<Session & { messages: SessionMes
   return window.electronAPI.invoke('sessions:get', { id });
 }
 
-export function startSession(projectId: string, projectPath: string): Promise<Session> {
-  return window.electronAPI.invoke('sessions:create', { projectId, projectPath });
-}
-
 export function startCopilotSession(projectId: string, projectPath: string): Promise<Session> {
-  return window.electronAPI.invoke('sessions:create', { projectId, projectPath, type: 'copilot' });
+  return window.electronAPI.invoke('sessions:create', { projectId, projectPath });
 }
 
 export function stopSession(id: string): Promise<{ success: true }> {

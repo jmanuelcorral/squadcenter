@@ -132,9 +132,7 @@ export default function Sidebar() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium">{session.projectName}</p>
-                    <p className="text-[10px] text-slate-500">
-                      {session.type === 'copilot' ? '✨ Copilot' : '💻 Shell'}
-                    </p>
+                    <p className="text-[10px] text-slate-500">✨ Copilot</p>
                   </div>
                 </button>
               );

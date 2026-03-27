@@ -1,6 +1,5 @@
 import type { IpcMain } from 'electron';
 import {
-  startSession,
   startCopilotSession,
   stopSession,
   sendInput,
@@ -31,12 +30,10 @@ export function registerSessionHandlers(ipcMain: IpcMain): void {
     return { ...session, messages };
   });
 
-  // sessions:create — start a new session (shell or copilot via `type` field)
-  ipcMain.handle('sessions:create', async (_event, { projectId, projectPath, type }: { projectId: string; projectPath: string; type?: string }) => {
+  // sessions:create — start a new copilot session
+  ipcMain.handle('sessions:create', async (_event, { projectId, projectPath }: { projectId: string; projectPath: string }) => {
     if (!projectId || !projectPath) throw new Error('projectId and projectPath are required');
-    const session = type === 'copilot'
-      ? await startCopilotSession(projectId, projectPath)
-      : startSession(projectId, projectPath);
+    const session = await startCopilotSession(projectId, projectPath);
     return session;
   });
 

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Play, Terminal, Loader2, Clock, Sparkles, Square } from 'lucide-react';
+import { Loader2, Clock, Sparkles, Square } from 'lucide-react';
 import type { Project } from '@shared/types';
-import { getProjectStatus, startSession, startCopilotSession, stopSession, getHookEvents } from '../lib/api';
+import { getProjectStatus, startCopilotSession, stopSession, getHookEvents } from '../lib/api';
 import type { ProjectStatus, HookEvent } from '../lib/api';
 import SetupHooksButton from './SetupHooksButton';
 
@@ -19,7 +19,6 @@ function timeAgo(dateStr: string): string {
 export default function ProjectCard({ project }: { project: Project }) {
   const navigate = useNavigate();
   const [status, setStatus] = useState<ProjectStatus | null>(null);
-  const [launching, setLaunching] = useState(false);
   const [launchingCopilot, setLaunchingCopilot] = useState(false);
   const [stoppingCopilot, setStoppingCopilot] = useState(false);
   const [hookEvents, setHookEvents] = useState<HookEvent[]>([]);
@@ -32,36 +31,6 @@ export default function ProjectCard({ project }: { project: Project }) {
       .then(setHookEvents)
       .catch(() => setHookEvents([]));
   }, [project.id]);
-
-  async function handleLaunch(e: React.MouseEvent) {
-    e.stopPropagation();
-    setLaunching(true);
-    try {
-      const session = await startSession(project.id, project.path);
-      navigate(`/sessions/${session.id}`);
-    } catch {
-      setLaunching(false);
-    }
-  }
-
-  async function handleEnter(e: React.MouseEvent) {
-    e.stopPropagation();
-    if (status?.sessionId) {
-      navigate(`/sessions/${status.sessionId}`);
-    } else {
-      // Hook-detected session or no managed session — launch one
-      setLaunching(true);
-      try {
-        const session = await startSession(project.id, project.path);
-        navigate(`/sessions/${session.id}`);
-      } catch {
-        // If launch fails, go to project view (shows hook activity)
-        navigate(`/project/${project.id}`);
-      } finally {
-        setLaunching(false);
-      }
-    }
-  }
 
   async function handleCopilotStart(e: React.MouseEvent) {
     e.stopPropagation();
@@ -197,8 +166,8 @@ export default function ProjectCard({ project }: { project: Project }) {
         )}
       </div>
 
-      {/* Footer: time + hook info + shell session */}
-      <div className="mt-3 flex items-center justify-between gap-2">
+      {/* Footer: time + hook info */}
+      <div className="mt-3 flex items-center gap-2">
         <div className="flex flex-col gap-0.5">
           <p className="text-[11px] text-slate-500">
             Updated {timeAgo(project.updatedAt)}
@@ -213,32 +182,6 @@ export default function ProjectCard({ project }: { project: Project }) {
             <SetupHooksButton projectId={project.id} inline />
           )}
         </div>
-
-        {isActive ? (
-          <button
-            onClick={handleEnter}
-            className="flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-1 text-[11px] font-medium text-emerald-400 ring-1 ring-emerald-500/20 hover:bg-emerald-500/20 transition-colors"
-          >
-            {launching ? (
-              <Loader2 className="w-3 h-3 animate-spin" />
-            ) : (
-              <Terminal className="w-3 h-3" />
-            )}
-            Enter Shell
-          </button>
-        ) : (
-          <button
-            onClick={handleLaunch}
-            className="flex items-center gap-1 rounded-md bg-slate-700/50 px-2 py-1 text-[11px] font-medium text-slate-400 ring-1 ring-slate-600/30 hover:bg-slate-700/80 hover:text-white transition-colors"
-          >
-            {launching ? (
-              <Loader2 className="w-3 h-3 animate-spin" />
-            ) : (
-              <Play className="w-3 h-3" />
-            )}
-            Shell Session
-          </button>
-        )}
       </div>
     </div>
   );
