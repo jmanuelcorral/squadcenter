@@ -82,6 +82,10 @@ export function clearEvents(projectPath: string): void {
   eventStore.delete(norm);
 }
 
+export function clearAllEvents(): void {
+  eventStore.clear();
+}
+
 export function hasActiveHookSession(projectId: string): boolean {
   const events = getEventsByProject(projectId, MAX_EVENTS_PER_PROJECT);
   let active = false;

@@ -3,8 +3,9 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { registerAllHandlers } from './ipc/index.js';
 import { setBrowserWindow } from './services/event-bridge.js';
-import { setDataDir } from './services/storage.js';
+import { setDataDir, saveNotifications } from './services/storage.js';
 import { startHooksServer, stopHooksServer } from './hooks-server.js';
+import { clearAllEvents } from './services/hook-event-store.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -83,7 +84,11 @@ const dataDir = path.join(
 );
 setDataDir(dataDir);
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  // Clear notifications and hook events from previous sessions
+  await saveNotifications([]).catch(() => {});
+  clearAllEvents();
+
   // Register all IPC handlers
   registerAllHandlers(ipcMain);
 
