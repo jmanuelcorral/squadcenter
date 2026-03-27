@@ -6,6 +6,7 @@ import { broadcast } from './event-bridge.js';
 import { detectAzureAccount, detectMcpServers, type AzureAccount, type McpServer } from './environment-info.js';
 import { watchCopilotSession, forceRefreshStats, forceRefreshActivity, type CopilotSessionStats, type AgentActivity } from './copilot-log-watcher.js';
 import { loadNotifications, saveNotifications, loadProjects } from './storage.js';
+import { startHookMonitoring, cleanupSignals, type HookMonitor } from './hook-manager.js';
 
 const MAX_OUTPUT_LINES = 500;
 
@@ -33,6 +34,7 @@ interface ManagedSession {
   azureAccount?: AzureAccount | null;
   mcpServers?: McpServer[];
   logWatcher?: { stop: () => void };
+  hookMonitor?: HookMonitor;
   agentActivity?: AgentActivity;
   notifiedSubagents: Set<string>;
 }
@@ -192,6 +194,15 @@ export async function startCopilotSession(projectId: string, projectPath: string
     detectMcpServers(projectPath).catch(() => []),
   ]);
 
+  // Setup hooks BEFORE copilot starts (copilot reads hooks.json on startup)
+  let hookMonitor: HookMonitor | null = null;
+  try {
+    hookMonitor = await startHookMonitoring(projectPath, id, projectId);
+    console.log('[session-manager] Hook monitoring started for', projectPath);
+  } catch (err) {
+    console.error('[session-manager] Hook monitoring failed (non-fatal):', err);
+  }
+
   const ptyProcess = pty.spawn('copilot', ['--yolo', '--allow-all', '--agent', 'squad'], {
     name: 'xterm-color',
     cols: 120,
@@ -209,6 +220,7 @@ export async function startCopilotSession(projectId: string, projectPath: string
     stats: createEmptyStats(),
     azureAccount,
     mcpServers,
+    hookMonitor: hookMonitor ?? undefined,
     notifiedSubagents: new Set(),
   };
 
@@ -223,6 +235,12 @@ export async function startCopilotSession(projectId: string, projectPath: string
     session.pid = undefined;
     addMessage(managed, 'system', 'Copilot session ended');
     broadcastSessionStatus(session);
+
+    // Stop hook monitor (hook's sessionEnd signal may have already fired)
+    if (managed.hookMonitor) {
+      managed.hookMonitor.stop();
+      managed.hookMonitor = undefined;
+    }
 
     // Create completion notification
     try {
