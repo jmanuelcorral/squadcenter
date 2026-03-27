@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Menu } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu, MenuItem, nativeImage } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { registerAllHandlers } from './ipc/index.js';
@@ -16,13 +16,43 @@ export function getMainWindow(): BrowserWindow | null {
 }
 
 function createWindow(): void {
-  // Remove the default menu bar
-  Menu.setApplicationMenu(null);
+  // Hidden menu with zoom keyboard shortcuts (Ctrl++, Ctrl+-, Ctrl+0)
+  const menu = Menu.buildFromTemplate([
+    {
+      label: 'View',
+      submenu: [
+        { role: 'zoomIn', accelerator: 'CmdOrCtrl+=' },
+        { role: 'zoomIn', accelerator: 'CmdOrCtrl+Plus', visible: false },
+        { role: 'zoomOut', accelerator: 'CmdOrCtrl+-' },
+        { role: 'resetZoom', accelerator: 'CmdOrCtrl+0' },
+        { type: 'separator' },
+        { role: 'toggleDevTools' },
+        { role: 'togglefullscreen' },
+      ],
+    },
+    {
+      label: 'Edit',
+      submenu: [
+        { role: 'undo' },
+        { role: 'redo' },
+        { type: 'separator' },
+        { role: 'cut' },
+        { role: 'copy' },
+        { role: 'paste' },
+        { role: 'selectAll' },
+      ],
+    },
+  ]);
+  Menu.setApplicationMenu(menu);
+
+  const iconPath = path.join(__dirname, '..', 'electron', 'icon.png');
 
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
     backgroundColor: '#0f172a',
+    icon: iconPath,
+    autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
       nodeIntegration: false,
