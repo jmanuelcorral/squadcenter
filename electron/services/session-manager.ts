@@ -250,7 +250,8 @@ export async function startCopilotSession(projectId: string, projectPath: string
     });
   } else {
     // Shell-only mode: open a shell with the configured environment
-    const shell = process.platform === 'win32' ? 'powershell.exe' : (process.env.SHELL || '/bin/bash');
+    const defaultShell = process.platform === 'win32' ? 'powershell.exe' : (process.env.SHELL || '/bin/bash');
+    const shell = config?.shell || defaultShell;
     ptyProcess = pty.spawn(shell, [], {
       name: 'xterm-color',
       cols: 120,

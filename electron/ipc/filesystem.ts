@@ -1,5 +1,6 @@
 import type { IpcMain } from 'electron';
 import fs from 'fs/promises';
+import { constants as fsConstants } from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
 
@@ -143,4 +144,100 @@ export function registerFilesystemHandlers(ipcMain: IpcMain): void {
     }
     return browseDirectory(requestedPath);
   });
+
+  // filesystem:availableShells — Detect available shells on the system
+  ipcMain.handle('filesystem:availableShells', async () => {
+    return detectAvailableShells();
+  });
+}
+
+interface ShellInfo {
+  id: string;
+  name: string;
+  path: string;
+}
+
+async function detectAvailableShells(): Promise<ShellInfo[]> {
+  const shells: ShellInfo[] = [];
+  const isWindows = process.platform === 'win32';
+
+  if (isWindows) {
+    const candidates: { id: string; name: string; paths: string[] }[] = [
+      {
+        id: 'powershell',
+        name: 'PowerShell',
+        paths: [
+          path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe'),
+        ],
+      },
+      {
+        id: 'pwsh',
+        name: 'PowerShell 7',
+        paths: [
+          path.join(process.env.ProgramFiles || 'C:\\Program Files', 'PowerShell', '7', 'pwsh.exe'),
+          path.join(process.env.ProgramFiles || 'C:\\Program Files', 'PowerShell', '6', 'pwsh.exe'),
+        ],
+      },
+      {
+        id: 'cmd',
+        name: 'Command Prompt',
+        paths: [
+          path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'cmd.exe'),
+        ],
+      },
+      {
+        id: 'gitbash',
+        name: 'Git Bash',
+        paths: [
+          path.join(process.env.ProgramFiles || 'C:\\Program Files', 'Git', 'bin', 'bash.exe'),
+          path.join(process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)', 'Git', 'bin', 'bash.exe'),
+        ],
+      },
+      {
+        id: 'wsl',
+        name: 'WSL',
+        paths: [
+          path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'wsl.exe'),
+        ],
+      },
+    ];
+
+    for (const candidate of candidates) {
+      for (const p of candidate.paths) {
+        try {
+          await fs.access(p, fsConstants.X_OK);
+          shells.push({ id: candidate.id, name: candidate.name, path: p });
+          break;
+        } catch { /* not found, try next */ }
+      }
+    }
+  } else {
+    // Unix: read /etc/shells and check which exist
+    try {
+      const etcShells = await fs.readFile('/etc/shells', 'utf-8');
+      const shellPaths = etcShells
+        .split('\n')
+        .map(l => l.trim())
+        .filter(l => l && !l.startsWith('#'));
+
+      for (const sp of shellPaths) {
+        try {
+          await fs.access(sp, fsConstants.X_OK);
+          const name = path.basename(sp);
+          shells.push({ id: name, name, path: sp });
+        } catch { /* skip */ }
+      }
+    } catch {
+      // Fallback: check common Unix shells
+      const fallbacks = ['/bin/bash', '/bin/zsh', '/bin/sh', '/bin/fish'];
+      for (const sp of fallbacks) {
+        try {
+          await fs.access(sp, fsConstants.X_OK);
+          shells.push({ id: path.basename(sp), name: path.basename(sp), path: sp });
+        } catch { /* skip */ }
+      }
+    }
+  }
+
+  return shells;
 }

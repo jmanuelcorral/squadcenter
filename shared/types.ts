@@ -3,6 +3,7 @@ export interface CopilotConfig {
   envVars: Record<string, string>;
   preCommands: string[];
   startCopilot?: boolean;
+  shell?: string;
 }
 
 export interface Project {

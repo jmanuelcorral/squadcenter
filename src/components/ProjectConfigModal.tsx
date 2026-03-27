@@ -1,8 +1,14 @@
-import { useState } from 'react';
-import { X, Plus, Trash2, Terminal, Variable, Command, Sparkles } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, Plus, Trash2, Terminal, Variable, Command, Sparkles, ChevronDown } from 'lucide-react';
 import type { CopilotConfig } from '../lib/api';
 
 const DEFAULT_ARGS = ['--yolo', '--allow-all', '--agent', 'squad'];
+
+interface ShellInfo {
+  id: string;
+  name: string;
+  path: string;
+}
 
 interface Props {
   config: CopilotConfig;
@@ -17,10 +23,18 @@ export default function ProjectConfigModal({ config, onSave, onClose }: Props) {
     Object.entries(config.envVars || {}).length ? Object.entries(config.envVars) : []
   );
   const [preCommands, setPreCommands] = useState<string[]>(config.preCommands || []);
+  const [selectedShell, setSelectedShell] = useState(config.shell || '');
+  const [availableShells, setAvailableShells] = useState<ShellInfo[]>([]);
   const [newArg, setNewArg] = useState('');
   const [newEnvKey, setNewEnvKey] = useState('');
   const [newEnvVal, setNewEnvVal] = useState('');
   const [newCmd, setNewCmd] = useState('');
+
+  useEffect(() => {
+    window.electronAPI.invoke('filesystem:availableShells').then((shells: ShellInfo[]) => {
+      setAvailableShells(shells);
+    });
+  }, []);
 
   function handleSave() {
     onSave({
@@ -28,6 +42,7 @@ export default function ProjectConfigModal({ config, onSave, onClose }: Props) {
       envVars: Object.fromEntries(envVars),
       preCommands,
       startCopilot,
+      shell: selectedShell || undefined,
     });
   }
 
@@ -75,6 +90,32 @@ export default function ProjectConfigModal({ config, onSave, onClose }: Props) {
             </div>
             <p className="text-[10px] text-slate-500 mt-1">
               {startCopilot ? 'Copilot CLI will start automatically' : 'Shell-only mode — opens a terminal with environment and pre-commands'}
+            </p>
+          </section>
+
+          {/* Shell selector */}
+          <section>
+            <div className="flex items-center gap-2 mb-2">
+              <Terminal className="w-4 h-4 text-cyan-400" />
+              <h3 className="text-sm font-semibold text-white">Shell</h3>
+            </div>
+            <div className="relative">
+              <select
+                value={selectedShell}
+                onChange={e => setSelectedShell(e.target.value)}
+                className="w-full appearance-none text-xs bg-slate-900/60 px-3 py-2 rounded-lg ring-1 ring-white/5 text-white font-mono focus:ring-cyan-500/50 focus:outline-none cursor-pointer pr-8"
+              >
+                <option value="">System default</option>
+                {availableShells.map(shell => (
+                  <option key={shell.id} value={shell.path}>
+                    {shell.name} — {shell.path}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 pointer-events-none" />
+            </div>
+            <p className="text-[10px] text-slate-500 mt-1">
+              {startCopilot ? 'Shell used for pre-launch commands' : 'Shell to open in terminal'}
             </p>
           </section>
 
