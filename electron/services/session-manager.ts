@@ -321,7 +321,7 @@ export async function startCopilotSession(projectId: string, projectPath: string
   session.status = 'active';
   session.pid = ptyProcess.pid;
 
-  addMessage(managed, 'system', 'Copilot session started');
+  addMessage(managed, 'system', launchCopilot ? 'Copilot session started' : 'Shell session started');
   broadcastSessionStatus(session);
 
   // Start watching copilot session logs for real stats

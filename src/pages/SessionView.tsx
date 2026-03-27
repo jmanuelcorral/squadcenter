@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Square, Circle, Loader2, PanelRightOpen, PanelRightClose, Sparkles, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Square, Circle, Loader2, PanelRightOpen, PanelRightClose, Sparkles, RotateCcw, Terminal } from 'lucide-react';
 import { getSession, stopSession, sendSessionInput, startCopilotSession, checkHooksConfigured, restartCopilotSession } from '../lib/api';
 import type { Session, SessionMessage, HooksValidation } from '../lib/api';
 import { useIpcEvents } from '../hooks/useIpcEvents';
@@ -172,13 +172,14 @@ export default function SessionView() {
 
   const isActive = session.status === 'active' || session.status === 'starting';
   const isCopilot = session.type === 'copilot';
-  const usePtyMode = isCopilot && isActive;
+  const isShell = session.type === 'shell';
+  const usePtyMode = (isCopilot || isShell) && isActive;
   const statusClass = statusColors[session.status] ?? statusColors.stopped;
 
   return (
     <div className="flex h-[calc(100vh)] flex-col">
       {/* Header */}
-      <header className={`flex items-center justify-between border-b bg-slate-900/80 backdrop-blur px-5 py-3 ${isCopilot ? 'border-violet-500/20' : 'border-white/5'}`}>
+      <header className={`flex items-center justify-between border-b bg-slate-900/80 backdrop-blur px-5 py-3 ${isCopilot ? 'border-violet-500/20' : isShell ? 'border-slate-500/20' : 'border-white/5'}`}>
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate(-1)}
@@ -197,12 +198,18 @@ export default function SessionView() {
                   Copilot
                 </span>
               )}
+              {isShell && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-slate-500/15 to-slate-600/15 px-2 py-0.5 text-[10px] font-semibold text-slate-300 ring-1 ring-slate-500/25">
+                  <Terminal className="w-3 h-3" />
+                  Shell
+                </span>
+              )}
               <h1 className="text-sm font-semibold text-white truncate max-w-xs">
                 {session.projectPath.split(/[/\\]/).pop() ?? 'Session'}
               </h1>
               <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ${statusClass}`}>
                 {session.status === 'active' && (
-                  <Circle className={`w-1.5 h-1.5 fill-current animate-pulse-dot ${isCopilot ? 'text-violet-400' : 'text-emerald-400'}`} />
+                  <Circle className={`w-1.5 h-1.5 fill-current animate-pulse-dot ${isCopilot ? 'text-violet-400' : isShell ? 'text-slate-400' : 'text-emerald-400'}`} />
                 )}
                 {session.status}
               </span>
@@ -229,12 +236,12 @@ export default function SessionView() {
           {isActive && (
             <>
               {/* Restart button */}
-              {isCopilot && (
+              {(isCopilot || isShell) && (
                 <button
                   onClick={handleRestart}
                   disabled={restarting}
                   className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-amber-400 ring-1 ring-amber-500/20 hover:bg-amber-500/10 transition-colors disabled:opacity-50"
-                  title="Restart Copilot session"
+                  title="Restart session"
                 >
                   {restarting ? (
                     <Loader2 className="w-3 h-3 animate-spin" />
