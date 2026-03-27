@@ -432,7 +432,7 @@ export function sendInput(sessionId: string, text: string): boolean {
   if (!managed) return false;
   if (managed.session.status !== 'active') return false;
 
-  if (managed.session.type === 'copilot') {
+  if (managed.session.type === 'copilot' || managed.session.type === 'shell') {
     if (!managed.pty) return false;
     managed.pty.write(text);
     return true;
