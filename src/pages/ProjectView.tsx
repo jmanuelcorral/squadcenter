@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronDown, ChevronRight, Users, Trash2, Sparkles, Loader2, Square, History, Settings, Pencil, Check, X } from 'lucide-react';
+import { ChevronLeft, ChevronDown, ChevronRight, Users, Trash2, Sparkles, Loader2, Square, History, Settings, Pencil, Check, X, Terminal } from 'lucide-react';
 import { fetchProject, fetchTeam, deleteProject, startCopilotSession, stopSession, getProjectStatus, updateProject } from '../lib/api';
 import type { Project, TeamMember, CopilotConfig } from '@shared/types';
 import type { ProjectStatus } from '../lib/api';
@@ -174,8 +174,12 @@ export default function ProjectView() {
               </div>
             )}
             {copilotStatus?.active && (
-              <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/20">
-                copilot running
+              <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ${
+                project.copilotConfig?.startCopilot === false
+                  ? 'bg-slate-500/10 text-slate-400 ring-slate-500/20'
+                  : 'bg-emerald-500/10 text-emerald-400 ring-emerald-500/20'
+              }`}>
+                {project.copilotConfig?.startCopilot === false ? 'shell running' : 'copilot running'}
               </span>
             )}
           </div>
@@ -186,48 +190,64 @@ export default function ProjectView() {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Copilot CTA */}
-          {copilotStatus?.active && copilotStatus.sessionId ? (
-            <div className="flex items-center gap-2">
+          {/* Session CTA */}
+          {(() => {
+            const isShellMode = project.copilotConfig?.startCopilot === false;
+            const SessionIcon = isShellMode ? Terminal : Sparkles;
+            const openLabel = isShellMode ? 'Open Shell' : 'Open Copilot';
+            const startLabel = isShellMode ? 'Start Shell' : 'Start Copilot';
+            const stopLabel = 'Stop';
+
+            return copilotStatus?.active && copilotStatus.sessionId ? (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => navigate(`/sessions/${copilotStatus.sessionId}`)}
+                  className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium ring-1 transition-all ${
+                    isShellMode
+                      ? 'bg-gradient-to-r from-slate-500/20 to-slate-600/20 text-slate-300 ring-slate-500/30 hover:from-slate-500/30 hover:to-slate-600/30'
+                      : 'bg-gradient-to-r from-violet-500/20 to-purple-600/20 text-violet-300 ring-violet-500/30 hover:from-violet-500/30 hover:to-purple-600/30'
+                  }`}
+                >
+                  <span className="relative flex h-2 w-2">
+                    <span className={`absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping ${isShellMode ? 'bg-slate-400' : 'bg-violet-400'}`} />
+                    <span className={`relative inline-flex h-2 w-2 rounded-full ${isShellMode ? 'bg-slate-500' : 'bg-violet-500'}`} />
+                  </span>
+                  <SessionIcon className="w-4 h-4" />
+                  {openLabel}
+                </button>
+                <button
+                  onClick={handleCopilotStop}
+                  disabled={stoppingCopilot}
+                  className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-red-400 ring-1 ring-red-500/20 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                  title={stopLabel}
+                >
+                  {stoppingCopilot ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Square className="w-3.5 h-3.5" />
+                  )}
+                  {stopLabel}
+                </button>
+              </div>
+            ) : (
               <button
-                onClick={() => navigate(`/sessions/${copilotStatus.sessionId}`)}
-                className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-violet-500/20 to-purple-600/20 px-4 py-2 text-sm font-medium text-violet-300 ring-1 ring-violet-500/30 hover:from-violet-500/30 hover:to-purple-600/30 transition-all"
+                onClick={handleCopilotStart}
+                disabled={launchingCopilot}
+                className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white shadow-lg transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed ${
+                  isShellMode
+                    ? 'bg-gradient-to-r from-slate-600 to-slate-700 shadow-slate-500/20 hover:from-slate-500 hover:to-slate-600'
+                    : 'bg-gradient-to-r from-violet-500 to-purple-600 shadow-violet-500/20 hover:from-violet-400 hover:to-purple-500'
+                }`}
               >
-                <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75 animate-ping" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-violet-500" />
-                </span>
-                <Sparkles className="w-4 h-4" />
-                Open Copilot
-              </button>
-              <button
-                onClick={handleCopilotStop}
-                disabled={stoppingCopilot}
-                className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-red-400 ring-1 ring-red-500/20 hover:bg-red-500/10 transition-colors disabled:opacity-50"
-                title="Stop Copilot"
-              >
-                {stoppingCopilot ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                {launchingCopilot ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
-                  <Square className="w-3.5 h-3.5" />
+                  <SessionIcon className="w-4 h-4" />
                 )}
-                Stop
+                {startLabel}
               </button>
-            </div>
-          ) : (
-            <button
-              onClick={handleCopilotStart}
-              disabled={launchingCopilot}
-              className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-violet-500 to-purple-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-500/20 hover:from-violet-400 hover:to-purple-500 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {launchingCopilot ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Sparkles className="w-4 h-4" />
-              )}
-              Start Copilot
-            </button>
-          )}
+            );
+          })()}
           <SetupHooksButton projectId={id!} />
           <button
             onClick={() => setShowConfigModal(true)}

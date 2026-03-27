@@ -2,6 +2,7 @@ export interface CopilotConfig {
   args: string[];
   envVars: Record<string, string>;
   preCommands: string[];
+  startCopilot?: boolean;
 }
 
 export interface Project {
@@ -47,7 +48,7 @@ export interface Session {
   id: string;
   projectId: string;
   projectPath: string;
-  type: 'copilot';
+  type: 'copilot' | 'shell';
   status: 'starting' | 'active' | 'stopped' | 'error';
   startedAt: string;
   pid?: number;

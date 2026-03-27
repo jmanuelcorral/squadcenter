@@ -194,17 +194,18 @@ export async function startCopilotSession(projectId: string, projectPath: string
   const existing = findActiveSessionForProject(projectId);
   if (existing) return existing;
 
+  const launchCopilot = config?.startCopilot !== false; // default true
   const id = crypto.randomUUID();
   const session: Session = {
     id,
     projectId,
     projectPath,
-    type: 'copilot',
+    type: launchCopilot ? 'copilot' : 'shell',
     status: 'starting',
     startedAt: new Date().toISOString(),
   };
 
-  // Detect Azure account and MCP servers BEFORE starting copilot
+  // Detect Azure account and MCP servers BEFORE starting
   const [azureAccount, mcpServers] = await Promise.all([
     detectAzureAccount().catch(() => null),
     detectMcpServers(projectPath).catch(() => []),
@@ -212,14 +213,15 @@ export async function startCopilotSession(projectId: string, projectPath: string
 
   // Setup hooks BEFORE copilot starts (copilot reads hooks.json on startup)
   let hookMonitor: HookMonitor | null = null;
-  try {
-    hookMonitor = await startHookMonitoring(projectPath, id, projectId);
-    console.log('[session-manager] Hook monitoring started for', projectPath);
-  } catch (err) {
-    console.error('[session-manager] Hook monitoring failed (non-fatal):', err);
+  if (launchCopilot) {
+    try {
+      hookMonitor = await startHookMonitoring(projectPath, id, projectId);
+      console.log('[session-manager] Hook monitoring started for', projectPath);
+    } catch (err) {
+      console.error('[session-manager] Hook monitoring failed (non-fatal):', err);
+    }
   }
 
-  const copilotArgs = config?.args?.length ? config.args : DEFAULT_COPILOT_ARGS;
   const sessionEnv = { ...(process.env as Record<string, string>) };
   if (config?.envVars) {
     Object.assign(sessionEnv, config.envVars);
@@ -236,13 +238,27 @@ export async function startCopilotSession(projectId: string, projectPath: string
     }
   }
 
-  const ptyProcess = pty.spawn('copilot', copilotArgs, {
-    name: 'xterm-color',
-    cols: 120,
-    rows: 30,
-    cwd: projectPath,
-    env: sessionEnv,
-  });
+  let ptyProcess: pty.IPty;
+  if (launchCopilot) {
+    const copilotArgs = config?.args?.length ? config.args : DEFAULT_COPILOT_ARGS;
+    ptyProcess = pty.spawn('copilot', copilotArgs, {
+      name: 'xterm-color',
+      cols: 120,
+      rows: 30,
+      cwd: projectPath,
+      env: sessionEnv,
+    });
+  } else {
+    // Shell-only mode: open a shell with the configured environment
+    const shell = process.platform === 'win32' ? 'powershell.exe' : (process.env.SHELL || '/bin/bash');
+    ptyProcess = pty.spawn(shell, [], {
+      name: 'xterm-color',
+      cols: 120,
+      rows: 30,
+      cwd: projectPath,
+      env: sessionEnv,
+    });
+  }
 
   const managed: ManagedSession = {
     session,
@@ -266,7 +282,7 @@ export async function startCopilotSession(projectId: string, projectPath: string
   ptyProcess.onExit(async () => {
     session.status = 'stopped';
     session.pid = undefined;
-    addMessage(managed, 'system', 'Copilot session ended');
+    addMessage(managed, 'system', session.type === 'shell' ? 'Shell session ended' : 'Copilot session ended');
     broadcastSessionStatus(session);
 
     // Stop hook monitor (hook's sessionEnd signal may have already fired)

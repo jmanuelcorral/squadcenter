@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Plus, Trash2, Terminal, Variable, Command } from 'lucide-react';
+import { X, Plus, Trash2, Terminal, Variable, Command, Sparkles } from 'lucide-react';
 import type { CopilotConfig } from '../lib/api';
 
 const DEFAULT_ARGS = ['--yolo', '--allow-all', '--agent', 'squad'];
@@ -11,6 +11,7 @@ interface Props {
 }
 
 export default function ProjectConfigModal({ config, onSave, onClose }: Props) {
+  const [startCopilot, setStartCopilot] = useState(config.startCopilot !== false);
   const [args, setArgs] = useState<string[]>(config.args.length ? config.args : DEFAULT_ARGS);
   const [envVars, setEnvVars] = useState<[string, string][]>(
     Object.entries(config.envVars || {}).length ? Object.entries(config.envVars) : []
@@ -26,6 +27,7 @@ export default function ProjectConfigModal({ config, onSave, onClose }: Props) {
       args,
       envVars: Object.fromEntries(envVars),
       preCommands,
+      startCopilot,
     });
   }
 
@@ -47,7 +49,37 @@ export default function ProjectConfigModal({ config, onSave, onClose }: Props) {
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
-          {/* Copilot Arguments */}
+          {/* Start Copilot toggle */}
+          <section>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {startCopilot ? (
+                  <Sparkles className="w-4 h-4 text-violet-400" />
+                ) : (
+                  <Terminal className="w-4 h-4 text-slate-400" />
+                )}
+                <h3 className="text-sm font-semibold text-white">Start Copilot</h3>
+              </div>
+              <button
+                onClick={() => setStartCopilot(!startCopilot)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  startCopilot ? 'bg-violet-600' : 'bg-slate-600'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 rounded-full bg-white transition-transform ${
+                    startCopilot ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+            <p className="text-[10px] text-slate-500 mt-1">
+              {startCopilot ? 'Copilot CLI will start automatically' : 'Shell-only mode — opens a terminal with environment and pre-commands'}
+            </p>
+          </section>
+
+          {/* Copilot Arguments — only when copilot is enabled */}
+          {startCopilot && (
           <section>
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
@@ -95,6 +127,7 @@ export default function ProjectConfigModal({ config, onSave, onClose }: Props) {
             </div>
             <p className="text-[10px] text-slate-600 mt-1">Command: copilot {args.join(' ')}</p>
           </section>
+          )}
 
           {/* Environment Variables */}
           <section>
