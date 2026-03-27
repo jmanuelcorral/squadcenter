@@ -1,12 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Users, Activity, Trash2, Radio, Sparkles, Loader2, Square, History } from 'lucide-react';
-import { fetchProject, fetchTeam, fetchLogs, deleteProject, getHookEvents, startCopilotSession, stopSession, getProjectStatus } from '../lib/api';
-import type { Project, TeamMember, ChatMessage } from '@shared/types';
-import type { HookEvent, ProjectStatus } from '../lib/api';
+import { ChevronLeft, Users, Trash2, Sparkles, Loader2, Square, History } from 'lucide-react';
+import { fetchProject, fetchTeam, deleteProject, startCopilotSession, stopSession, getProjectStatus } from '../lib/api';
+import type { Project, TeamMember } from '@shared/types';
+import type { ProjectStatus } from '../lib/api';
 import TeamPanel from '../components/TeamPanel';
-import ActivityFeed from '../components/ActivityFeed';
-import ActivityTimeline from '../components/ActivityTimeline';
 import SetupHooksButton from '../components/SetupHooksButton';
 import SessionHistoryPanel from '../components/SessionHistoryPanel';
 
@@ -15,40 +13,26 @@ export default function ProjectView() {
   const navigate = useNavigate();
   const [project, setProject] = useState<Project | null>(null);
   const [team, setTeam] = useState<TeamMember[]>([]);
-  const [logs, setLogs] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'activity' | 'team' | 'monitoring' | 'history'>('history');
+  const [activeTab, setActiveTab] = useState<'history' | 'team'>('history');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [hookEventCount, setHookEventCount] = useState(0);
   const [copilotStatus, setCopilotStatus] = useState<ProjectStatus | null>(null);
   const [launchingCopilot, setLaunchingCopilot] = useState(false);
   const [stoppingCopilot, setStoppingCopilot] = useState(false);
-  const feedRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!id) return;
     Promise.all([
       fetchProject(id),
       fetchTeam(id).catch(() => [] as TeamMember[]),
-      fetchLogs(id).catch(() => [] as ChatMessage[]),
-      getHookEvents(id, 10).catch(() => [] as HookEvent[]),
       getProjectStatus(id).catch(() => null as ProjectStatus | null),
-    ]).then(([proj, tm, lg, hookEvts, projStatus]) => {
+    ]).then(([proj, tm, projStatus]) => {
       setProject(proj);
       setTeam(tm);
-      setLogs(lg);
-      setHookEventCount(hookEvts.length);
       setCopilotStatus(projStatus);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, [id]);
-
-  // Auto-scroll to bottom of feed
-  useEffect(() => {
-    if (feedRef.current) {
-      feedRef.current.scrollTop = feedRef.current.scrollHeight;
-    }
-  }, [logs]);
 
   async function handleDelete() {
     if (!id) return;
@@ -205,15 +189,6 @@ export default function ProjectView() {
           Sessions
         </button>
         <button
-          onClick={() => setActiveTab('activity')}
-          className={`flex-1 flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-all ${
-            activeTab === 'activity' ? 'bg-white/10 text-white' : 'text-slate-400'
-          }`}
-        >
-          <Activity className="w-4 h-4" />
-          Activity
-        </button>
-        <button
           onClick={() => setActiveTab('team')}
           className={`flex-1 flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-all ${
             activeTab === 'team' ? 'bg-white/10 text-white' : 'text-slate-400'
@@ -222,62 +197,16 @@ export default function ProjectView() {
           <Users className="w-4 h-4" />
           Team
         </button>
-        <button
-          onClick={() => setActiveTab('monitoring')}
-          className={`flex-1 flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-all ${
-            activeTab === 'monitoring' ? 'bg-white/10 text-white' : 'text-slate-400'
-          }`}
-        >
-          <Radio className="w-4 h-4" />
-          Monitoring
-          {hookEventCount > 0 && (
-            <span className="flex h-4 min-w-[16px] items-center justify-center rounded-full bg-emerald-500/20 px-1 text-[10px] font-bold text-emerald-400">
-              {hookEventCount}
-            </span>
-          )}
-        </button>
       </div>
 
-      {/* Four-column layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      {/* Two-column layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Session History — left */}
         <div className={`lg:col-span-2 ${activeTab !== 'history' ? 'hidden lg:block' : ''}`}>
           <SessionHistoryPanel projectPath={project.path} />
         </div>
 
-        {/* Activity Feed */}
-        <div className={`${activeTab !== 'activity' ? 'hidden lg:block' : ''}`}>
-          <div className="rounded-xl bg-slate-800/40 ring-1 ring-white/10 overflow-hidden">
-            <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5">
-              <Activity className="w-4 h-4 text-violet-400" />
-              <h2 className="text-sm font-semibold text-white">Activity</h2>
-              <span className="text-xs text-slate-500 ml-auto">{logs.length} entries</span>
-            </div>
-            <div ref={feedRef} className="max-h-[calc(100vh-320px)] overflow-y-auto">
-              <ActivityFeed messages={logs} />
-            </div>
-          </div>
-        </div>
-
-        {/* Hook Events Timeline — center */}
-        <div className={`${activeTab !== 'monitoring' ? 'hidden lg:block' : ''}`}>
-          <div className="rounded-xl bg-slate-800/40 ring-1 ring-white/10 overflow-hidden">
-            <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5">
-              <Radio className="w-4 h-4 text-cyan-400" />
-              <h2 className="text-sm font-semibold text-white">Monitoring</h2>
-              {hookEventCount > 0 && (
-                <span className="flex h-4 min-w-[16px] items-center justify-center rounded-full bg-cyan-500/15 px-1 text-[10px] font-bold text-cyan-400 ml-auto">
-                  {hookEventCount}
-                </span>
-              )}
-            </div>
-            <div className="max-h-[calc(100vh-320px)] overflow-hidden">
-              <ActivityTimeline projectId={id!} />
-            </div>
-          </div>
-        </div>
-
-        {/* Team Panel — right sidebar */}
+        {/* Team Panel — right sidebar (static roster, no live activity) */}
         <div className={`${activeTab !== 'team' ? 'hidden lg:block' : ''}`}>
           <div className="rounded-xl bg-slate-800/40 ring-1 ring-white/10 overflow-hidden">
             <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5">
