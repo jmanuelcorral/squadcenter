@@ -66,10 +66,10 @@ export default function ProjectCard({ project }: { project: Project }) {
   return (
     <div
       onClick={() => navigate(`/project/${project.id}`)}
-      className="group relative flex flex-col rounded-xl bg-slate-800/60 ring-1 ring-white/10 p-5 text-left transition-all duration-200 hover:ring-emerald-500/50 hover:bg-slate-800/80 hover:shadow-lg hover:shadow-emerald-500/5 cursor-pointer"
+      className="group relative flex flex-col rounded-tr-xl rounded-bl-xl bg-slate-800/60 ring-1 ring-white/10 p-5 text-left transition-all duration-200 hover:ring-emerald-500/50 hover:bg-slate-800/80 hover:shadow-lg hover:shadow-emerald-500/5 cursor-pointer"
     >
       {/* Gradient top border */}
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-emerald-500/60 via-violet-500/60 to-emerald-500/0 rounded-t-xl" />
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-emerald-500/60 via-violet-500/60 to-emerald-500/0 rounded-tr-xl" />
 
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2 min-w-0">
