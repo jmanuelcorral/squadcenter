@@ -90,15 +90,13 @@ export default function ProjectCard({ project }: { project: Project }) {
             {project.name}
           </h3>
         </div>
-        <span
-          className={`shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${
-            project.status === 'active'
-              ? 'bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/20'
-              : 'bg-slate-700/50 text-slate-400 ring-1 ring-slate-600/30'
-          }`}
-        >
-          {project.status}
-        </span>
+        {isActive && (
+          <span
+            className="shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/20"
+          >
+            copilot running
+          </span>
+        )}
       </div>
 
       <p className="mt-1 text-xs text-slate-500 font-mono truncate">{project.path}</p>

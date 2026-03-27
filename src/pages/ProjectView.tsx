@@ -107,15 +107,11 @@ export default function ProjectView() {
           </button>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold text-white tracking-tight">{project.name}</h1>
-            <span
-              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                project.status === 'active'
-                  ? 'bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/20'
-                  : 'bg-slate-700/50 text-slate-400 ring-1 ring-slate-600/30'
-              }`}
-            >
-              {project.status}
-            </span>
+            {copilotStatus?.active && (
+              <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/20">
+                copilot running
+              </span>
+            )}
           </div>
           <p className="text-sm text-slate-500 font-mono mt-1">{project.path}</p>
           {project.description && (
