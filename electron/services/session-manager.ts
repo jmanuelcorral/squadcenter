@@ -172,7 +172,7 @@ export function startSession(projectId: string, projectPath: string): Session {
   return session;
 }
 
-export async function startCopilotSession(projectId: string, projectPath: string, prompt?: string): Promise<Session> {
+export async function startCopilotSession(projectId: string, projectPath: string): Promise<Session> {
   const existing = findActiveSessionForProject(projectId);
   if (existing) return existing;
 
@@ -192,12 +192,7 @@ export async function startCopilotSession(projectId: string, projectPath: string
     detectMcpServers(projectPath).catch(() => []),
   ]);
 
-  const copilotArgs = ['--yolo', '--allow-all', '--agent', 'squad'];
-  if (prompt) {
-    copilotArgs.push('-p', prompt, '--autopilot');
-  }
-
-  const ptyProcess = pty.spawn('copilot', copilotArgs, {
+  const ptyProcess = pty.spawn('copilot', ['--yolo', '--allow-all', '--agent', 'squad'], {
     name: 'xterm-color',
     cols: 120,
     rows: 30,

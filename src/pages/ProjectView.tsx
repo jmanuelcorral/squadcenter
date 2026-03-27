@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Users, Activity, Trash2, Radio, Sparkles, Loader2, Square, Rocket } from 'lucide-react';
+import { ChevronLeft, Users, Activity, Trash2, Radio, Sparkles, Loader2, Square } from 'lucide-react';
 import { fetchProject, fetchTeam, fetchLogs, deleteProject, getHookEvents, startCopilotSession, stopSession, getProjectStatus } from '../lib/api';
 import type { Project, TeamMember, ChatMessage } from '@shared/types';
 import type { HookEvent, ProjectStatus } from '../lib/api';
@@ -21,9 +21,6 @@ export default function ProjectView() {
   const [hookEventCount, setHookEventCount] = useState(0);
   const [copilotStatus, setCopilotStatus] = useState<ProjectStatus | null>(null);
   const [launchingCopilot, setLaunchingCopilot] = useState(false);
-  const [launchingBackground, setLaunchingBackground] = useState(false);
-  const [showBgPrompt, setShowBgPrompt] = useState(false);
-  const [bgPromptText, setBgPromptText] = useState('');
   const [stoppingCopilot, setStoppingCopilot] = useState(false);
   const feedRef = useRef<HTMLDivElement>(null);
 
@@ -73,27 +70,6 @@ export default function ProjectView() {
     }
   }
 
-  async function handleCopilotBackground() {
-    if (!id || !project) return;
-    setShowBgPrompt(true);
-  }
-
-  async function handleBgLaunch() {
-    if (!id || !project || !bgPromptText.trim()) return;
-    setShowBgPrompt(false);
-    setLaunchingBackground(true);
-    try {
-      await startCopilotSession(id, project.path, bgPromptText.trim());
-      const refreshed = await getProjectStatus(id);
-      setCopilotStatus(refreshed);
-      setBgPromptText('');
-    } catch {
-      // ignore
-    } finally {
-      setLaunchingBackground(false);
-    }
-  }
-
   async function handleCopilotStop() {
     if (!id || !copilotStatus?.sessionId) return;
     setStoppingCopilot(true);
@@ -133,34 +109,6 @@ export default function ProjectView() {
   }
 
   return (
-    <>
-    {/* Background prompt dialog */}
-    {showBgPrompt && (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowBgPrompt(false)}>
-        <div className="bg-slate-800 rounded-xl ring-1 ring-white/20 p-6 w-full max-w-lg shadow-2xl" onClick={e => e.stopPropagation()}>
-          <h3 className="text-lg font-semibold text-white mb-2">🚀 Launch Background Session</h3>
-          <p className="text-sm text-slate-400 mb-4">Enter the task for copilot to execute autonomously:</p>
-          <textarea
-            autoFocus
-            value={bgPromptText}
-            onChange={e => setBgPromptText(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleBgLaunch(); } }}
-            placeholder="e.g. Fix the failing tests in src/auth/"
-            className="w-full h-24 px-3 py-2 bg-slate-900/80 rounded-lg ring-1 ring-white/10 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 resize-none"
-          />
-          <div className="flex justify-end gap-2 mt-4">
-            <button onClick={() => setShowBgPrompt(false)} className="px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors">Cancel</button>
-            <button
-              onClick={handleBgLaunch}
-              disabled={!bgPromptText.trim()}
-              className="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-600 disabled:text-slate-400 text-white rounded-lg transition-colors flex items-center gap-2"
-            >
-              <Rocket className="w-4 h-4" /> Launch
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
     <div className="p-8 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
@@ -220,33 +168,18 @@ export default function ProjectView() {
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleCopilotStart}
-                disabled={launchingCopilot || launchingBackground}
-                className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-violet-500 to-purple-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-500/20 hover:from-violet-400 hover:to-purple-500 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {launchingCopilot ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Sparkles className="w-4 h-4" />
-                )}
-                Start Copilot
-              </button>
-              <button
-                onClick={handleCopilotBackground}
-                disabled={launchingCopilot || launchingBackground}
-                className="flex items-center gap-2 rounded-lg bg-slate-700/60 px-3 py-2.5 text-sm font-medium text-slate-300 ring-1 ring-white/10 hover:bg-slate-700/80 hover:text-white transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
-                title="Launch in background — get notified when done"
-              >
-                {launchingBackground ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Rocket className="w-4 h-4" />
-                )}
-                Background
-              </button>
-            </div>
+            <button
+              onClick={handleCopilotStart}
+              disabled={launchingCopilot}
+              className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-violet-500 to-purple-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-500/20 hover:from-violet-400 hover:to-purple-500 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {launchingCopilot ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Sparkles className="w-4 h-4" />
+              )}
+              Start Copilot
+            </button>
           )}
           <SetupHooksButton projectId={id!} />
           <button
@@ -370,6 +303,5 @@ export default function ProjectView() {
         </div>
       )}
     </div>
-    </>
   );
 }
