@@ -16,6 +16,7 @@ import {
   listSessions,
 } from '../services/session-manager.js';
 import { listSessionHistory } from '../services/copilot-log-watcher.js';
+import { loadProjects } from '../services/storage.js';
 
 export function registerSessionHandlers(ipcMain: IpcMain): void {
   // sessions:list — list all sessions
@@ -100,7 +101,10 @@ export function registerSessionHandlers(ipcMain: IpcMain): void {
     stopSession(sessionId);
     // Small delay for cleanup
     await new Promise(r => setTimeout(r, 500));
-    const session = await startCopilotSession(projectId, projectPath);
+    // Load the project's saved copilotConfig
+    const projects = loadProjects();
+    const project = projects.find(p => p.id === projectId);
+    const session = await startCopilotSession(projectId, projectPath, project?.copilotConfig);
     return session;
   });
 

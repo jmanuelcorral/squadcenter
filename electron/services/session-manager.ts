@@ -1,4 +1,4 @@
-import { spawn, type ChildProcess } from 'child_process';
+import { spawn, exec, type ChildProcess } from 'child_process';
 import crypto from 'crypto';
 import * as pty from 'node-pty';
 import type { Session, SessionMessage, Notification, CopilotConfig } from '../../shared/types.js';
@@ -176,6 +176,20 @@ export function startSession(projectId: string, projectPath: string): Session {
 
 const DEFAULT_COPILOT_ARGS = ['--yolo', '--allow-all', '--agent', 'squad'];
 
+function runPreCommand(cmd: string, cwd: string, env: Record<string, string>): Promise<{ stdout: string; stderr: string }> {
+  return new Promise((resolve, reject) => {
+    exec(cmd, { cwd, env: env as NodeJS.ProcessEnv, timeout: 30_000 }, (err, stdout, stderr) => {
+      if (err) {
+        console.error(`[session-manager] Pre-command failed: ${cmd}`, err.message);
+        reject(err);
+      } else {
+        console.log(`[session-manager] Pre-command OK: ${cmd}`);
+        resolve({ stdout, stderr });
+      }
+    });
+  });
+}
+
 export async function startCopilotSession(projectId: string, projectPath: string, config?: CopilotConfig): Promise<Session> {
   const existing = findActiveSessionForProject(projectId);
   if (existing) return existing;
@@ -209,6 +223,17 @@ export async function startCopilotSession(projectId: string, projectPath: string
   const sessionEnv = { ...(process.env as Record<string, string>) };
   if (config?.envVars) {
     Object.assign(sessionEnv, config.envVars);
+  }
+
+  // Execute pre-launch commands sequentially
+  if (config?.preCommands?.length) {
+    for (const cmd of config.preCommands) {
+      try {
+        await runPreCommand(cmd, projectPath, sessionEnv);
+      } catch (err) {
+        console.error(`[session-manager] Pre-command failed (continuing): ${cmd}`, err);
+      }
+    }
   }
 
   const ptyProcess = pty.spawn('copilot', copilotArgs, {
