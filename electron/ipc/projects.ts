@@ -68,6 +68,22 @@ export function registerProjectHandlers(ipcMain: IpcMain): void {
     broadcast('project-updated', projects[index]);
   });
 
+  // projects:update — Update project fields (name, description, copilotConfig)
+  ipcMain.handle('projects:update', async (_event, { id, updates }: { id: string; updates: Partial<Pick<Project, 'name' | 'description' | 'copilotConfig'>> }) => {
+    const projects = await loadProjects();
+    const index = projects.findIndex(p => p.id === id);
+    if (index === -1) throw new Error('Project not found');
+
+    if (updates.name !== undefined) projects[index].name = updates.name;
+    if (updates.description !== undefined) projects[index].description = updates.description;
+    if (updates.copilotConfig !== undefined) projects[index].copilotConfig = updates.copilotConfig;
+    projects[index].updatedAt = new Date().toISOString();
+
+    await saveProjects(projects);
+    broadcast('project-updated', projects[index]);
+    return projects[index];
+  });
+
   // projects:import — Import a project from a filesystem path
   ipcMain.handle('projects:import', async (_event, { path: projectPath }: { path: string }) => {
     if (!projectPath) throw new Error('path is required');

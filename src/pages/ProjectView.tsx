@@ -1,12 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronDown, ChevronRight, Users, Trash2, Sparkles, Loader2, Square, History } from 'lucide-react';
-import { fetchProject, fetchTeam, deleteProject, startCopilotSession, stopSession, getProjectStatus } from '../lib/api';
-import type { Project, TeamMember } from '@shared/types';
+import { ChevronLeft, ChevronDown, ChevronRight, Users, Trash2, Sparkles, Loader2, Square, History, Settings, Pencil, Check, X } from 'lucide-react';
+import { fetchProject, fetchTeam, deleteProject, startCopilotSession, stopSession, getProjectStatus, updateProject } from '../lib/api';
+import type { Project, TeamMember, CopilotConfig } from '@shared/types';
 import type { ProjectStatus } from '../lib/api';
 import TeamPanel from '../components/TeamPanel';
 import SetupHooksButton from '../components/SetupHooksButton';
 import SessionHistoryPanel from '../components/SessionHistoryPanel';
+import ProjectConfigModal from '../components/ProjectConfigModal';
 
 export default function ProjectView() {
   const { id } = useParams<{ id: string }>();
@@ -20,6 +21,10 @@ export default function ProjectView() {
   const [launchingCopilot, setLaunchingCopilot] = useState(false);
   const [stoppingCopilot, setStoppingCopilot] = useState(false);
   const [teamCollapsed, setTeamCollapsed] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameValue, setNameValue] = useState('');
+  const [showConfigModal, setShowConfigModal] = useState(false);
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -49,7 +54,7 @@ export default function ProjectView() {
     if (!id || !project) return;
     setLaunchingCopilot(true);
     try {
-      const session = await startCopilotSession(id, project.path);
+      const session = await startCopilotSession(id, project.path, project.copilotConfig);
       navigate(`/sessions/${session.id}`);
     } catch {
       setLaunchingCopilot(false);
@@ -67,6 +72,35 @@ export default function ProjectView() {
       // ignore
     } finally {
       setStoppingCopilot(false);
+    }
+  }
+
+  function startEditingName() {
+    if (!project) return;
+    setNameValue(project.name);
+    setEditingName(true);
+    setTimeout(() => nameInputRef.current?.focus(), 0);
+  }
+
+  async function saveNameEdit() {
+    if (!id || !project || !nameValue.trim()) return;
+    try {
+      const updated = await updateProject(id, { name: nameValue.trim() });
+      setProject(updated);
+      setEditingName(false);
+    } catch {
+      // ignore
+    }
+  }
+
+  async function handleSaveConfig(config: CopilotConfig) {
+    if (!id || !project) return;
+    try {
+      const updated = await updateProject(id, { copilotConfig: config });
+      setProject(updated);
+      setShowConfigModal(false);
+    } catch {
+      // ignore
     }
   }
 
@@ -107,7 +141,38 @@ export default function ProjectView() {
             Back to projects
           </button>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-white tracking-tight">{project.name}</h1>
+            {editingName ? (
+              <div className="flex items-center gap-2">
+                <input
+                  ref={nameInputRef}
+                  type="text"
+                  value={nameValue}
+                  onChange={e => setNameValue(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') saveNameEdit();
+                    if (e.key === 'Escape') setEditingName(false);
+                  }}
+                  className="text-2xl font-bold text-white tracking-tight bg-transparent border-b-2 border-violet-500 outline-none px-0 py-0"
+                />
+                <button onClick={saveNameEdit} className="p-1 text-emerald-400 hover:text-emerald-300 transition-colors">
+                  <Check className="w-5 h-5" />
+                </button>
+                <button onClick={() => setEditingName(false)} className="p-1 text-slate-500 hover:text-slate-300 transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 group/name">
+                <h1 className="text-2xl font-bold text-white tracking-tight">{project.name}</h1>
+                <button
+                  onClick={startEditingName}
+                  className="p-1 text-slate-600 opacity-0 group-hover/name:opacity-100 hover:text-slate-300 transition-all"
+                  title="Edit name"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
             {copilotStatus?.active && (
               <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/20">
                 copilot running
@@ -164,6 +229,13 @@ export default function ProjectView() {
             </button>
           )}
           <SetupHooksButton projectId={id!} />
+          <button
+            onClick={() => setShowConfigModal(true)}
+            className="p-2 text-slate-500 hover:text-violet-400 rounded-lg hover:bg-violet-500/10 transition-all"
+            title="Session configuration"
+          >
+            <Settings className="w-4 h-4" />
+          </button>
           <button
             onClick={() => setShowDeleteConfirm(true)}
             className="p-2 text-slate-500 hover:text-red-400 rounded-lg hover:bg-red-500/10 transition-all"
@@ -250,6 +322,15 @@ export default function ProjectView() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Config modal */}
+      {showConfigModal && (
+        <ProjectConfigModal
+          config={project.copilotConfig || { args: [], envVars: {}, preCommands: [] }}
+          onSave={handleSaveConfig}
+          onClose={() => setShowConfigModal(false)}
+        />
       )}
     </div>
   );

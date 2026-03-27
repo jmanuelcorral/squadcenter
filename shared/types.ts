@@ -1,3 +1,9 @@
+export interface CopilotConfig {
+  args: string[];
+  envVars: Record<string, string>;
+  preCommands: string[];
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -7,6 +13,7 @@ export interface Project {
   updatedAt: string;
   team?: TeamMember[];
   status: 'active' | 'archived';
+  copilotConfig?: CopilotConfig;
 }
 
 export interface TeamMember {

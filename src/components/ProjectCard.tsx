@@ -36,7 +36,7 @@ export default function ProjectCard({ project }: { project: Project }) {
     e.stopPropagation();
     setLaunchingCopilot(true);
     try {
-      const session = await startCopilotSession(project.id, project.path);
+      const session = await startCopilotSession(project.id, project.path, project.copilotConfig);
       navigate(`/sessions/${session.id}`);
     } catch {
       setLaunchingCopilot(false);

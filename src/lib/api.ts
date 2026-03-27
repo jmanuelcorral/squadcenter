@@ -1,6 +1,6 @@
-import type { Project, TeamMember, Notification, ChatMessage } from '@shared/types';
+import type { Project, TeamMember, Notification, ChatMessage, CopilotConfig } from '@shared/types';
 
-export type { Project, TeamMember, Notification, ChatMessage };
+export type { Project, TeamMember, Notification, ChatMessage, CopilotConfig };
 
 // Session types (contract with backend — Morpheus adding to shared/types.ts)
 export interface Session {
@@ -87,6 +87,10 @@ export function deleteProject(id: string): Promise<void> {
   return window.electronAPI.invoke('projects:delete', { id });
 }
 
+export function updateProject(id: string, updates: Partial<Pick<Project, 'name' | 'description' | 'copilotConfig'>>): Promise<Project> {
+  return window.electronAPI.invoke('projects:update', { id, updates });
+}
+
 export function importProject(path: string): Promise<Project> {
   return window.electronAPI.invoke('projects:import', { path });
 }
@@ -136,8 +140,8 @@ export function getSession(id: string): Promise<Session & { messages: SessionMes
   return window.electronAPI.invoke('sessions:get', { id });
 }
 
-export function startCopilotSession(projectId: string, projectPath: string): Promise<Session> {
-  return window.electronAPI.invoke('sessions:create', { projectId, projectPath });
+export function startCopilotSession(projectId: string, projectPath: string, copilotConfig?: CopilotConfig): Promise<Session> {
+  return window.electronAPI.invoke('sessions:create', { projectId, projectPath, copilotConfig });
 }
 
 export function stopSession(id: string): Promise<{ success: true }> {

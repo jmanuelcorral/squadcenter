@@ -32,9 +32,9 @@ export function registerSessionHandlers(ipcMain: IpcMain): void {
   });
 
   // sessions:create — start a new copilot session
-  ipcMain.handle('sessions:create', async (_event, { projectId, projectPath }: { projectId: string; projectPath: string }) => {
+  ipcMain.handle('sessions:create', async (_event, { projectId, projectPath, copilotConfig }: { projectId: string; projectPath: string; copilotConfig?: any }) => {
     if (!projectId || !projectPath) throw new Error('projectId and projectPath are required');
-    const session = await startCopilotSession(projectId, projectPath);
+    const session = await startCopilotSession(projectId, projectPath, copilotConfig);
     return session;
   });
 

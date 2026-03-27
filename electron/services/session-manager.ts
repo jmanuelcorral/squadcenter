@@ -1,7 +1,7 @@
 import { spawn, type ChildProcess } from 'child_process';
 import crypto from 'crypto';
 import * as pty from 'node-pty';
-import type { Session, SessionMessage, Notification } from '../../shared/types.js';
+import type { Session, SessionMessage, Notification, CopilotConfig } from '../../shared/types.js';
 import { broadcast } from './event-bridge.js';
 import { detectAzureAccount, detectMcpServers, type AzureAccount, type McpServer } from './environment-info.js';
 import { watchCopilotSession, forceRefreshStats, forceRefreshActivity, type CopilotSessionStats, type AgentActivity } from './copilot-log-watcher.js';
@@ -174,7 +174,9 @@ export function startSession(projectId: string, projectPath: string): Session {
   return session;
 }
 
-export async function startCopilotSession(projectId: string, projectPath: string): Promise<Session> {
+const DEFAULT_COPILOT_ARGS = ['--yolo', '--allow-all', '--agent', 'squad'];
+
+export async function startCopilotSession(projectId: string, projectPath: string, config?: CopilotConfig): Promise<Session> {
   const existing = findActiveSessionForProject(projectId);
   if (existing) return existing;
 
@@ -203,12 +205,18 @@ export async function startCopilotSession(projectId: string, projectPath: string
     console.error('[session-manager] Hook monitoring failed (non-fatal):', err);
   }
 
-  const ptyProcess = pty.spawn('copilot', ['--yolo', '--allow-all', '--agent', 'squad'], {
+  const copilotArgs = config?.args?.length ? config.args : DEFAULT_COPILOT_ARGS;
+  const sessionEnv = { ...(process.env as Record<string, string>) };
+  if (config?.envVars) {
+    Object.assign(sessionEnv, config.envVars);
+  }
+
+  const ptyProcess = pty.spawn('copilot', copilotArgs, {
     name: 'xterm-color',
     cols: 120,
     rows: 30,
     cwd: projectPath,
-    env: process.env as Record<string, string>,
+    env: sessionEnv,
   });
 
   const managed: ManagedSession = {
