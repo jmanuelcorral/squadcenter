@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import type { Notification } from '@shared/types';
 import { fetchNotifications, markNotificationRead, clearNotifications as clearNotificationsApi } from '../lib/api';
 import { useIpcEvents } from './useIpcEvents';
@@ -18,6 +18,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const { messages } = useIpcEvents();
+  const processedCount = useRef(0);
 
   useEffect(() => {
     fetchNotifications()
@@ -26,12 +27,27 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       .finally(() => setLoading(false));
   }, []);
 
-  // Listen for real-time notifications via IPC events
+  // Process ALL new notification messages, not just the last one
   useEffect(() => {
-    const latest = messages[messages.length - 1];
-    if (latest?.type === 'notification') {
-      const n = latest.payload as Notification;
-      setNotifications((prev) => [n, ...prev]);
+    // Handle array cap/shrink: reset if array is smaller than our counter
+    if (messages.length < processedCount.current) {
+      processedCount.current = 0;
+    }
+    if (messages.length <= processedCount.current) return;
+
+    const newMessages = messages.slice(processedCount.current);
+    processedCount.current = messages.length;
+
+    const newNotifications = newMessages
+      .filter(m => m.type === 'notification')
+      .map(m => m.payload as Notification);
+
+    if (newNotifications.length > 0) {
+      setNotifications((prev) => {
+        const existingIds = new Set(prev.map(n => n.id));
+        const deduped = newNotifications.filter(n => !existingIds.has(n.id));
+        return [...deduped, ...prev];
+      });
     }
   }, [messages]);
 

@@ -245,8 +245,9 @@ export async function startCopilotSession(projectId: string, projectPath: string
       existing.unshift(notification);
       await saveNotifications(existing);
       broadcast('notification', notification);
-    } catch {
-      // Notification creation is best-effort
+      console.log('[session-manager] Notification broadcast: session completed for', projectName);
+    } catch (err) {
+      console.error('[session-manager] Failed to create completion notification:', err);
     }
   });
 
@@ -293,14 +294,14 @@ export async function startCopilotSession(projectId: string, projectPath: string
                 read: false,
                 createdAt: sub.endTime ?? new Date().toISOString(),
               };
+              console.log('[session-manager] Subagent notification:', memberName, sub.status, sub.description || sub.name);
               broadcast('notification', notification);
-              // Persist async (best-effort)
               loadNotifications()
                 .then((existing) => {
                   existing.unshift(notification);
                   return saveNotifications(existing);
                 })
-                .catch(() => {});
+                .catch((err) => console.error('[session-manager] Failed to persist subagent notification:', err));
             }
           }
         }

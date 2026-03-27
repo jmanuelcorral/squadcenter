@@ -21,10 +21,13 @@ export function setBrowserWindow(win: BrowserWindow): void {
 }
 
 export function broadcast(type: EventType | string, payload: unknown): void {
-  if (!mainWindow || mainWindow.isDestroyed()) return;
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    console.warn('[event-bridge] Cannot broadcast, window unavailable:', type);
+    return;
+  }
   try {
     mainWindow.webContents.send(`event:${type}`, payload);
-  } catch {
-    // Window may have been destroyed between the check and the send
+  } catch (err) {
+    console.error('[event-bridge] Failed to broadcast:', type, err);
   }
 }

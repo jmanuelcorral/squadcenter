@@ -224,6 +224,17 @@ export default function SidebarTeamPanel({ projectId, sessionId }: SidebarTeamPa
     };
   }, [sessionId]);
 
+  // Fallback polling every 5s in case IPC events are missed
+  useEffect(() => {
+    if (!sessionId) return;
+    const interval = setInterval(() => {
+      getAgentActivity(sessionId)
+        .then((data) => { if (data) setActivity(data); })
+        .catch(() => {});
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [sessionId]);
+
   const handleRefresh = async () => {
     if (!sessionId) return;
     setRefreshing(true);

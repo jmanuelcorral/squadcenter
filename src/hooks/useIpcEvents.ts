@@ -22,7 +22,11 @@ export function useIpcEvents() {
     eventTypes.forEach((channel) => {
       const cleanup = window.electronAPI.on(channel, (payload: unknown) => {
         const type = channel.replace('event:', '');
-        setMessages((prev) => [...prev, { type, payload }]);
+        setMessages((prev) => {
+          // Cap messages to prevent unbounded growth
+          const next = [...prev, { type, payload }];
+          return next.length > 200 ? next.slice(-100) : next;
+        });
       });
       cleanupFns.current.push(cleanup);
     });
