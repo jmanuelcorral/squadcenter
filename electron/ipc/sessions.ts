@@ -96,4 +96,13 @@ export function registerSessionHandlers(ipcMain: IpcMain): void {
   ipcMain.handle('sessions:refreshAgentActivity', async (_event, { id }: { id: string }) => {
     return refreshSessionAgentActivity(id);
   });
+
+  // sessions:restart — stop and restart a copilot session
+  ipcMain.handle('sessions:restart', async (_event, { sessionId, projectId, projectPath }: { sessionId: string; projectId: string; projectPath: string }) => {
+    stopSession(sessionId);
+    // Small delay for cleanup
+    await new Promise(r => setTimeout(r, 500));
+    const session = await startCopilotSession(projectId, projectPath);
+    return session;
+  });
 }

@@ -212,4 +212,15 @@ export function registerProjectHandlers(ipcMain: IpcMain): void {
     await generateHooksConfig(project.path, serverUrl);
     return { success: true };
   });
+
+  // projects:checkHooks — Check if hooks.json exists in the project
+  ipcMain.handle('projects:checkHooks', async (_event, { projectPath }: { projectPath: string }) => {
+    try {
+      const hooksJsonPath = path.join(projectPath, '.copilot', 'hooks.json');
+      await fs.access(hooksJsonPath);
+      return { configured: true };
+    } catch {
+      return { configured: false };
+    }
+  });
 }

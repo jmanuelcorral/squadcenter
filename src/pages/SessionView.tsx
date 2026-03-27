@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Square, Circle, Loader2, PanelRightOpen, PanelRightClose, Sparkles } from 'lucide-react';
-import { getSession, stopSession, sendSessionInput } from '../lib/api';
+import { ArrowLeft, Square, Circle, Loader2, PanelRightOpen, PanelRightClose, Sparkles, RotateCcw } from 'lucide-react';
+import { getSession, stopSession, sendSessionInput, startCopilotSession, checkHooksConfigured, restartCopilotSession } from '../lib/api';
 import type { Session, SessionMessage } from '../lib/api';
 import { useIpcEvents } from '../hooks/useIpcEvents';
 import SessionTerminal from '../components/SessionTerminal';
@@ -10,6 +10,7 @@ import ActivityTimeline from '../components/ActivityTimeline';
 import SessionStatsPanel from '../components/SessionStatsPanel';
 import SidebarTeamPanel from '../components/SidebarTeamPanel';
 import McpServersPanel from '../components/McpServersPanel';
+import SetupHooksButton from '../components/SetupHooksButton';
 
 import AzureAccountPanel from '../components/AzureAccountPanel';
 
@@ -28,8 +29,10 @@ export default function SessionView() {
   const [messages, setMessages] = useState<SessionMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [stopping, setStopping] = useState(false);
+  const [restarting, setRestarting] = useState(false);
   const [thinking, setThinking] = useState(false);
   const [showActivity, setShowActivity] = useState(true);
+  const [hooksConfigured, setHooksConfigured] = useState<boolean | null>(null);
   const { messages: ipcMessages } = useIpcEvents();
   const lastIpcMsgIndexRef = useRef(0);
 
@@ -46,6 +49,14 @@ export default function SessionView() {
       })
       .finally(() => setLoading(false));
   }, [id]);
+
+  // Check if hooks are configured for this project
+  useEffect(() => {
+    if (!session?.projectPath) return;
+    checkHooksConfigured(session.projectPath)
+      .then((result) => setHooksConfigured(result.configured))
+      .catch(() => setHooksConfigured(false));
+  }, [session?.projectPath]);
 
   // Subscribe to IPC events for this session
   useEffect(() => {
@@ -126,6 +137,20 @@ export default function SessionView() {
     }
   }, [id]);
 
+  const handleRestart = useCallback(async () => {
+    if (!id || !session) return;
+    setRestarting(true);
+    try {
+      const newSession = await restartCopilotSession(id, session.projectId, session.projectPath);
+      // Navigate to the new session
+      navigate(`/sessions/${newSession.id}`, { replace: true });
+    } catch {
+      // ignore
+    } finally {
+      setRestarting(false);
+    }
+  }, [id, session, navigate]);
+
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -202,18 +227,38 @@ export default function SessionView() {
           </button>
 
           {isActive && (
-            <button
-              onClick={handleStop}
-              disabled={stopping}
-              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-red-400 ring-1 ring-red-500/20 hover:bg-red-500/10 transition-colors disabled:opacity-50"
-            >
-              {stopping ? (
-                <Loader2 className="w-3 h-3 animate-spin" />
-              ) : (
-                <Square className="w-3 h-3" />
+            <>
+              {/* Restart button */}
+              {isCopilot && (
+                <button
+                  onClick={handleRestart}
+                  disabled={restarting}
+                  className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-amber-400 ring-1 ring-amber-500/20 hover:bg-amber-500/10 transition-colors disabled:opacity-50"
+                  title="Restart Copilot session"
+                >
+                  {restarting ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <RotateCcw className="w-3 h-3" />
+                  )}
+                  Restart
+                </button>
               )}
-              Stop
-            </button>
+
+              {/* Stop button */}
+              <button
+                onClick={handleStop}
+                disabled={stopping}
+                className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-red-400 ring-1 ring-red-500/20 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+              >
+                {stopping ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <Square className="w-3 h-3" />
+                )}
+                Stop
+              </button>
+            </>
           )}
         </div>
       </header>
@@ -262,17 +307,34 @@ export default function SessionView() {
             {/* Azure Account */}
             <AzureAccountPanel sessionId={session.id} />
 
-            {/* Activity Timeline */}
-            <div className="flex items-center gap-2 px-4 py-2.5 border-b border-white/5">
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75 animate-ping" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-cyan-500" />
-              </span>
-              <h2 className="text-xs font-semibold text-slate-300">Copilot Activity</h2>
-            </div>
-            <div className="flex-1 overflow-hidden">
-              <ActivityTimeline projectId={session.projectId} compact />
-            </div>
+            {/* Hooks / Copilot Activity */}
+            {hooksConfigured === false && (
+              <div className="px-4 py-3 border-b border-white/5">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="relative flex h-2 w-2">
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-slate-500" />
+                  </span>
+                  <h2 className="text-xs font-semibold text-slate-400">Copilot Hooks</h2>
+                </div>
+                <p className="text-[10px] text-slate-500 mb-2">
+                  Configura los hooks para recibir notificaciones automáticas cuando Copilot termine de trabajar.
+                </p>
+                <SetupHooksButton projectId={session.projectId} />
+              </div>
+            )}
+
+            {hooksConfigured === true && (
+              <div className="px-4 py-2.5 border-b border-white/5">
+                <div className="flex items-center gap-2">
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                  </span>
+                  <h2 className="text-xs font-semibold text-slate-300">Hooks Activos</h2>
+                  <span className="text-[10px] text-emerald-400/60 ml-auto">Monitorizando</span>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

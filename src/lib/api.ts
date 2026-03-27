@@ -147,6 +147,14 @@ export function stopSession(id: string): Promise<{ success: true }> {
   return window.electronAPI.invoke('sessions:stop', { id });
 }
 
+export function restartCopilotSession(sessionId: string, projectId: string, projectPath: string): Promise<Session> {
+  return window.electronAPI.invoke('sessions:restart', { sessionId, projectId, projectPath });
+}
+
+export function checkHooksConfigured(projectPath: string): Promise<{ configured: boolean }> {
+  return window.electronAPI.invoke('projects:checkHooks', { projectPath });
+}
+
 export function sendSessionInput(id: string, text: string): Promise<{ success: true }> {
   return window.electronAPI.invoke('sessions:sendInput', { id, text });
 }
