@@ -15,6 +15,7 @@ import {
   refreshSessionAgentActivity,
   listSessions,
 } from '../services/session-manager.js';
+import { listSessionHistory } from '../services/copilot-log-watcher.js';
 
 export function registerSessionHandlers(ipcMain: IpcMain): void {
   // sessions:list — list all sessions
@@ -101,5 +102,10 @@ export function registerSessionHandlers(ipcMain: IpcMain): void {
     await new Promise(r => setTimeout(r, 500));
     const session = await startCopilotSession(projectId, projectPath);
     return session;
+  });
+
+  // sessions:history — list all copilot session history for a project
+  ipcMain.handle('sessions:history', async (_event, { projectPath }: { projectPath: string }) => {
+    return listSessionHistory(projectPath);
   });
 }

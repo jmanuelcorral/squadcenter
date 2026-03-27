@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Users, Activity, Trash2, Radio, Sparkles, Loader2, Square } from 'lucide-react';
+import { ChevronLeft, Users, Activity, Trash2, Radio, Sparkles, Loader2, Square, History } from 'lucide-react';
 import { fetchProject, fetchTeam, fetchLogs, deleteProject, getHookEvents, startCopilotSession, stopSession, getProjectStatus } from '../lib/api';
 import type { Project, TeamMember, ChatMessage } from '@shared/types';
 import type { HookEvent, ProjectStatus } from '../lib/api';
@@ -8,6 +8,7 @@ import TeamPanel from '../components/TeamPanel';
 import ActivityFeed from '../components/ActivityFeed';
 import ActivityTimeline from '../components/ActivityTimeline';
 import SetupHooksButton from '../components/SetupHooksButton';
+import SessionHistoryPanel from '../components/SessionHistoryPanel';
 
 export default function ProjectView() {
   const { id } = useParams<{ id: string }>();
@@ -16,7 +17,7 @@ export default function ProjectView() {
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [logs, setLogs] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'activity' | 'team' | 'monitoring'>('activity');
+  const [activeTab, setActiveTab] = useState<'activity' | 'team' | 'monitoring' | 'history'>('history');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [hookEventCount, setHookEventCount] = useState(0);
   const [copilotStatus, setCopilotStatus] = useState<ProjectStatus | null>(null);
@@ -195,6 +196,15 @@ export default function ProjectView() {
       {/* Mobile tabs */}
       <div className="flex lg:hidden gap-1 mb-4 bg-slate-800/50 rounded-lg p-1 ring-1 ring-white/5">
         <button
+          onClick={() => setActiveTab('history')}
+          className={`flex-1 flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-all ${
+            activeTab === 'history' ? 'bg-white/10 text-white' : 'text-slate-400'
+          }`}
+        >
+          <History className="w-4 h-4" />
+          Sessions
+        </button>
+        <button
           onClick={() => setActiveTab('activity')}
           className={`flex-1 flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-all ${
             activeTab === 'activity' ? 'bg-white/10 text-white' : 'text-slate-400'
@@ -228,10 +238,15 @@ export default function ProjectView() {
         </button>
       </div>
 
-      {/* Three-column layout */}
+      {/* Four-column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Activity Feed — left */}
-        <div className={`lg:col-span-2 ${activeTab !== 'activity' ? 'hidden lg:block' : ''}`}>
+        {/* Session History — left */}
+        <div className={`lg:col-span-2 ${activeTab !== 'history' ? 'hidden lg:block' : ''}`}>
+          <SessionHistoryPanel projectPath={project.path} />
+        </div>
+
+        {/* Activity Feed */}
+        <div className={`${activeTab !== 'activity' ? 'hidden lg:block' : ''}`}>
           <div className="rounded-xl bg-slate-800/40 ring-1 ring-white/10 overflow-hidden">
             <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5">
               <Activity className="w-4 h-4 text-violet-400" />

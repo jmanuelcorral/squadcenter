@@ -51,13 +51,22 @@ export interface AgentActivity {
   lastUpdated: string;
 }
 
+export interface SessionHistoryEntry {
+  id: string;
+  sessionDir: string;
+  startedAt: string;
+  stats: CopilotSessionStats;
+  agentSummary: { total: number; completed: number; failed: number; running: number };
+  members: string[];
+}
+
 const LOG_PREFIX = '[copilot-log-watcher]';
 
-async function findCopilotSessionDir(projectPath: string): Promise<string | null> {
+async function findAllCopilotSessionDirs(projectPath: string): Promise<{ dir: string; mtime: number; id: string }[]> {
   const sessionStateDir = path.join(os.homedir(), '.copilot', 'session-state');
   try {
     const dirs = await readdir(sessionStateDir, { withFileTypes: true });
-    const candidates: { dir: string; mtime: number }[] = [];
+    const candidates: { dir: string; mtime: number; id: string }[] = [];
     for (const d of dirs) {
       if (!d.isDirectory()) continue;
       const wsPath = path.join(sessionStateDir, d.name, 'workspace.yaml');
@@ -69,14 +78,19 @@ async function findCopilotSessionDir(projectPath: string): Promise<string | null
           const normalizedProject = projectPath.replace(/[\\/]+$/, '');
           if (cwd.toLowerCase() === normalizedProject.toLowerCase()) {
             const fileStat = await stat(wsPath);
-            candidates.push({ dir: path.join(sessionStateDir, d.name), mtime: fileStat.mtimeMs });
+            candidates.push({ dir: path.join(sessionStateDir, d.name), mtime: fileStat.mtimeMs, id: d.name });
           }
         }
       } catch { /* skip unreadable dirs */ }
     }
     candidates.sort((a, b) => b.mtime - a.mtime);
-    return candidates[0]?.dir ?? null;
-  } catch { return null; }
+    return candidates;
+  } catch { return []; }
+}
+
+async function findCopilotSessionDir(projectPath: string): Promise<string | null> {
+  const candidates = await findAllCopilotSessionDirs(projectPath);
+  return candidates[0]?.dir ?? null;
 }
 
 async function parseEventsFile(eventsPath: string): Promise<CopilotSessionStats> {
@@ -367,11 +381,24 @@ export function watchCopilotSession(
   projectPath: string,
   onUpdate: (stats: CopilotSessionStats) => void,
   onActivityUpdate?: (activity: AgentActivity) => void,
+  startedAfter?: number,
 ): { stop: () => void } {
   let watcher: FSWatcher | null = null;
   let dirWatcher: FSWatcher | null = null;
   let pollInterval: ReturnType<typeof setInterval> | null = null;
   let stopped = false;
+
+  // Find session dir created/modified after the managed session started
+  const findSessionDir = async (): Promise<string | null> => {
+    const candidates = await findAllCopilotSessionDirs(projectPath);
+    if (startedAfter) {
+      // Only consider dirs modified after session start (with 5s grace)
+      const threshold = startedAfter - 5000;
+      const fresh = candidates.find(c => c.mtime >= threshold);
+      return fresh?.dir ?? null;
+    }
+    return candidates[0]?.dir ?? null;
+  };
 
   const watchEventsFile = (eventsPath: string) => {
     // Always use polling — fs.watch is unreliable on Windows for appended files
@@ -394,7 +421,7 @@ export function watchCopilotSession(
     // Phase 1: find the session directory — retry up to 2 minutes
     let sessionDir: string | null = null;
     for (let attempt = 0; attempt < 40 && !stopped; attempt++) {
-      sessionDir = await findCopilotSessionDir(projectPath);
+      sessionDir = await findSessionDir();
       if (sessionDir) break;
       await new Promise(r => setTimeout(r, 3000));
     }
@@ -404,7 +431,7 @@ export function watchCopilotSession(
       // Keep scanning every 10s indefinitely
       pollInterval = setInterval(async () => {
         if (stopped) return;
-        const dir = await findCopilotSessionDir(projectPath);
+        const dir = await findSessionDir();
         if (dir) {
           console.log(LOG_PREFIX, 'Late-found session dir:', dir);
           if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
@@ -493,4 +520,40 @@ export async function forceRefreshActivity(projectPath: string): Promise<AgentAc
   console.log(LOG_PREFIX, 'Force refresh activity: found dir', sessionDir);
   const eventsPath = path.join(sessionDir, 'events.jsonl');
   return parseAgentActivity(eventsPath);
+}
+
+/** List all copilot session history for a project path */
+export async function listSessionHistory(projectPath: string): Promise<SessionHistoryEntry[]> {
+  const dirs = await findAllCopilotSessionDirs(projectPath);
+  const entries: SessionHistoryEntry[] = [];
+
+  for (const { dir, mtime, id } of dirs) {
+    const eventsPath = path.join(dir, 'events.jsonl');
+    try {
+      const [stats, activity] = await Promise.all([
+        parseEventsFile(eventsPath),
+        parseAgentActivity(eventsPath),
+      ]);
+
+      // Skip empty sessions (no turns at all)
+      if (stats.turns === 0 && stats.toolCalls === 0) continue;
+
+      const subagents = activity.subagents ?? [];
+      entries.push({
+        id,
+        sessionDir: dir,
+        startedAt: new Date(mtime).toISOString(),
+        stats,
+        agentSummary: {
+          total: subagents.length,
+          completed: subagents.filter(s => s.status === 'completed').length,
+          failed: subagents.filter(s => s.status === 'failed').length,
+          running: subagents.filter(s => s.status === 'running').length,
+        },
+        members: Object.keys(activity.members),
+      });
+    } catch { /* skip unreadable sessions */ }
+  }
+
+  return entries;
 }

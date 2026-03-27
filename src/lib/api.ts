@@ -272,3 +272,28 @@ export function getSessionStats(id: string): Promise<SessionStats | null> {
 export function refreshSessionStats(id: string): Promise<SessionStats | null> {
   return window.electronAPI.invoke('sessions:refreshStats', { id });
 }
+
+// Session History (past copilot sessions from disk)
+export interface SessionHistoryEntry {
+  id: string;
+  sessionDir: string;
+  startedAt: string;
+  stats: {
+    outputTokens: number;
+    premiumRequests: number;
+    turns: number;
+    toolCalls: number;
+    lastUpdated: string;
+  };
+  agentSummary: {
+    total: number;
+    completed: number;
+    failed: number;
+    running: number;
+  };
+  members: string[];
+}
+
+export function getSessionHistory(projectPath: string): Promise<SessionHistoryEntry[]> {
+  return window.electronAPI.invoke('sessions:history', { projectPath });
+}

@@ -276,6 +276,8 @@ export async function startCopilotSession(projectId: string, projectPath: string
   broadcastSessionStatus(session);
 
   // Start watching copilot session logs for real stats
+  // Pass session start time so the watcher only tracks NEW session dirs
+  const sessionStartTime = Date.now();
   const logWatcher = watchCopilotSession(
     projectPath,
     (copilotStats) => {
@@ -327,6 +329,7 @@ export async function startCopilotSession(projectId: string, projectPath: string
       managed.agentActivity = activity;
       broadcast('session:agentActivity', { sessionId: id, activity });
     },
+    sessionStartTime,
   );
   managed.logWatcher = logWatcher;
 
