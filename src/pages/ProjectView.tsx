@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Users, Trash2, Sparkles, Loader2, Square, History } from 'lucide-react';
+import { ChevronLeft, ChevronDown, ChevronRight, Users, Trash2, Sparkles, Loader2, Square, History } from 'lucide-react';
 import { fetchProject, fetchTeam, deleteProject, startCopilotSession, stopSession, getProjectStatus } from '../lib/api';
 import type { Project, TeamMember } from '@shared/types';
 import type { ProjectStatus } from '../lib/api';
@@ -19,6 +19,7 @@ export default function ProjectView() {
   const [copilotStatus, setCopilotStatus] = useState<ProjectStatus | null>(null);
   const [launchingCopilot, setLaunchingCopilot] = useState(false);
   const [stoppingCopilot, setStoppingCopilot] = useState(false);
+  const [teamCollapsed, setTeamCollapsed] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -202,15 +203,23 @@ export default function ProjectView() {
           <SessionHistoryPanel projectPath={project.path} />
         </div>
 
-        {/* Team Panel — right sidebar (static roster, no live activity) */}
+        {/* Team Panel — right sidebar (collapsible, static roster) */}
         <div className={`${activeTab !== 'team' ? 'hidden lg:block' : ''}`}>
           <div className="rounded-xl bg-slate-800/40 ring-1 ring-white/10 overflow-hidden">
-            <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5">
+            <button
+              onClick={() => setTeamCollapsed(!teamCollapsed)}
+              className="w-full flex items-center gap-2 px-4 py-3 border-b border-white/5 hover:bg-white/5 transition-colors"
+            >
               <Users className="w-4 h-4 text-emerald-400" />
               <h2 className="text-sm font-semibold text-white">Team</h2>
               <span className="text-xs text-slate-500 ml-auto">{team.length} members</span>
-            </div>
-            <TeamPanel members={team} />
+              {teamCollapsed ? (
+                <ChevronRight className="w-4 h-4 text-slate-500" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-slate-500" />
+              )}
+            </button>
+            {!teamCollapsed && <TeamPanel members={team} />}
           </div>
         </div>
       </div>
