@@ -11,7 +11,7 @@ import { validateProjectHooks } from '../services/hook-manager.js';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { findSessionByProject } from '../services/session-manager.js';
-import { hasActiveHookSession } from '../services/hook-event-store.js';
+import { hasActiveHookSession, isRecentlyWorking } from '../services/hook-event-store.js';
 import type { ProjectStatus } from '../../shared/types.js';
 
 const execAsync = promisify(exec);
@@ -157,6 +157,7 @@ export function registerProjectHandlers(ipcMain: IpcMain): void {
       const status: ProjectStatus = {
         active: true,
         managed: true,
+        working: isRecentlyWorking(projectId),
         pid: managedSession.pid,
         sessionId: managedSession.id,
         sessionType: managedSession.type,
@@ -169,34 +170,10 @@ export function registerProjectHandlers(ipcMain: IpcMain): void {
       const status: ProjectStatus = {
         active: true,
         managed: false,
+        working: isRecentlyWorking(projectId),
         hookDetected: true,
       };
       return status;
-    }
-
-    // Attempt external copilot process detection (Windows)
-    if (process.platform === 'win32') {
-      try {
-        const psCommand = `Get-CimInstance Win32_Process | Where-Object { $_.Name -match 'node' -and ($_.CommandLine -match 'copilot' -or $_.CommandLine -match 'ghcs') } | Select-Object ProcessId, CommandLine | ConvertTo-Json -Compress`;
-        const { stdout } = await execAsync(`powershell -NoProfile -Command "${psCommand}"`, {
-          timeout: 5000,
-        });
-
-        if (stdout.trim()) {
-          const parsed = JSON.parse(stdout.trim());
-          const procs = Array.isArray(parsed) ? parsed : [parsed];
-          if (procs.length > 0) {
-            const status: ProjectStatus = {
-              active: true,
-              managed: false,
-              pid: procs[0].ProcessId,
-            };
-            return status;
-          }
-        }
-      } catch {
-        // PowerShell detection failed — fall through to inactive
-      }
     }
 
     const status: ProjectStatus = { active: false, managed: false };

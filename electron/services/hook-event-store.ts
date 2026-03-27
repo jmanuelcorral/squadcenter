@@ -92,6 +92,21 @@ export function hasActiveHookSession(projectId: string): boolean {
   return active;
 }
 
+const WORKING_THRESHOLD_MS = 30_000; // 30s of no tool use → not working
+
+export function isRecentlyWorking(projectId: string): boolean {
+  const events = getEventsByProject(projectId, MAX_EVENTS_PER_PROJECT);
+  const now = Date.now();
+  for (let i = events.length - 1; i >= 0; i--) {
+    const e = events[i];
+    if (e.eventType === 'sessionEnd') return false;
+    if (e.eventType === 'postToolUse') {
+      return now - new Date(e.timestamp).getTime() < WORKING_THRESHOLD_MS;
+    }
+  }
+  return false;
+}
+
 export interface ActivitySummary {
   eventType: HookEventType;
   count: number;

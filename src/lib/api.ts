@@ -25,6 +25,7 @@ export interface SessionMessage {
 export interface ProjectStatus {
   active: boolean;
   managed: boolean;
+  working?: boolean;
   sessionId?: string;
   sessionType?: 'shell' | 'copilot';
   hookDetected?: boolean;

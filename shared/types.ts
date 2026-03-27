@@ -58,6 +58,7 @@ export interface SessionMessage {
 export interface ProjectStatus {
   active: boolean;
   managed: boolean;
+  working?: boolean;
   pid?: number;
   sessionId?: string;
   sessionType?: 'shell' | 'copilot';

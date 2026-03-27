@@ -90,14 +90,7 @@ export default function ProjectCard({ project }: { project: Project }) {
   }
 
   const isActive = status?.active ?? false;
-
-  // Detect active copilot session from hook events (sessionStart without a later sessionEnd)
-  const lastStart = hookEvents.filter((e) => e.eventType === 'sessionStart').at(-1);
-  const lastEnd = hookEvents.filter((e) => e.eventType === 'sessionEnd').at(-1);
-  const hasHookSession = !!lastStart && (!lastEnd || new Date(lastStart.timestamp) > new Date(lastEnd.timestamp));
-  const showActive = isActive || hasHookSession;
-
-  // Last activity from hook events
+  const isWorking = status?.working ?? false;
   const lastHookEvent = hookEvents.at(-1);
   const hasRecentHookEvents = hookEvents.length > 0;
 
@@ -111,17 +104,19 @@ export default function ProjectCard({ project }: { project: Project }) {
 
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2 min-w-0">
-          {/* Session status dot */}
-          <span className="relative shrink-0 flex h-2.5 w-2.5">
-            {showActive ? (
-              <>
-                <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping" />
-                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
-              </>
-            ) : (
-              <span className="inline-flex h-2.5 w-2.5 rounded-full bg-slate-600" />
-            )}
-          </span>
+          {/* Session status dot — hidden when no session, solid green when started, pulsing when working */}
+          {isActive && (
+            <span className="relative shrink-0 flex h-2.5 w-2.5">
+              {isWorking ? (
+                <>
+                  <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping" />
+                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                </>
+              ) : (
+                <span className="inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+              )}
+            </span>
+          )}
           <h3 className="text-base font-semibold text-white group-hover:text-emerald-400 transition-colors truncate">
             {project.name}
           </h3>
@@ -219,7 +214,7 @@ export default function ProjectCard({ project }: { project: Project }) {
           )}
         </div>
 
-        {showActive ? (
+        {isActive ? (
           <button
             onClick={handleEnter}
             className="flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-1 text-[11px] font-medium text-emerald-400 ring-1 ring-emerald-500/20 hover:bg-emerald-500/20 transition-colors"
