@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Square, Circle, Loader2, PanelRightOpen, PanelRightClose, Sparkles, RotateCcw } from 'lucide-react';
 import { getSession, stopSession, sendSessionInput, startCopilotSession, checkHooksConfigured, restartCopilotSession } from '../lib/api';
-import type { Session, SessionMessage } from '../lib/api';
+import type { Session, SessionMessage, HooksValidation } from '../lib/api';
 import { useIpcEvents } from '../hooks/useIpcEvents';
 import SessionTerminal from '../components/SessionTerminal';
 import ChatInput from '../components/ChatInput';
@@ -32,7 +32,7 @@ export default function SessionView() {
   const [restarting, setRestarting] = useState(false);
   const [thinking, setThinking] = useState(false);
   const [showActivity, setShowActivity] = useState(true);
-  const [hooksConfigured, setHooksConfigured] = useState<boolean | null>(null);
+  const [hooksStatus, setHooksStatus] = useState<HooksValidation | null>(null);
   const { messages: ipcMessages } = useIpcEvents();
   const lastIpcMsgIndexRef = useRef(0);
 
@@ -50,12 +50,12 @@ export default function SessionView() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  // Check if hooks are configured for this project
+  // Validate hooks configuration for this project
   useEffect(() => {
     if (!session?.projectPath) return;
     checkHooksConfigured(session.projectPath)
-      .then((result) => setHooksConfigured(result.configured))
-      .catch(() => setHooksConfigured(false));
+      .then((result) => setHooksStatus(result))
+      .catch(() => setHooksStatus({ configured: false, hasHooksJson: false, hasSessionEnd: false, hasPostToolUse: false, hasSessionStart: false, hasScripts: false, missing: ['validation failed'] }));
   }, [session?.projectPath]);
 
   // Subscribe to IPC events for this session
@@ -308,22 +308,31 @@ export default function SessionView() {
             <AzureAccountPanel sessionId={session.id} />
 
             {/* Hooks / Copilot Activity */}
-            {hooksConfigured === false && (
+            {hooksStatus && !hooksStatus.configured && (
               <div className="px-4 py-3 border-b border-white/5">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="relative flex h-2 w-2">
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-slate-500" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
                   </span>
                   <h2 className="text-xs font-semibold text-slate-400">Copilot Hooks</h2>
                 </div>
-                <p className="text-[10px] text-slate-500 mb-2">
+                <p className="text-[10px] text-slate-500 mb-1">
                   Configura los hooks para recibir notificaciones automáticas cuando Copilot termine de trabajar.
                 </p>
-                <SetupHooksButton projectId={session.projectId} />
+                {hooksStatus.missing.length > 0 && (
+                  <p className="text-[10px] text-amber-400/70 mb-2">
+                    Faltan: {hooksStatus.missing.join(', ')}
+                  </p>
+                )}
+                <SetupHooksButton projectId={session.projectId} onSetup={() => {
+                  if (session?.projectPath) {
+                    checkHooksConfigured(session.projectPath).then(setHooksStatus);
+                  }
+                }} />
               </div>
             )}
 
-            {hooksConfigured === true && (
+            {hooksStatus?.configured && (
               <div className="px-4 py-2.5 border-b border-white/5">
                 <div className="flex items-center gap-2">
                   <span className="relative flex h-2 w-2">

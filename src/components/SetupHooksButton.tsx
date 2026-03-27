@@ -6,9 +6,11 @@ interface SetupHooksButtonProps {
   projectId: string;
   /** When true, render as a small link-style button (for use in cards) */
   inline?: boolean;
+  /** Called after hooks are successfully set up */
+  onSetup?: () => void;
 }
 
-export default function SetupHooksButton({ projectId, inline = false }: SetupHooksButtonProps) {
+export default function SetupHooksButton({ projectId, inline = false, onSetup }: SetupHooksButtonProps) {
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [hooksPath, setHooksPath] = useState<string | null>(null);
   const [showTooltip, setShowTooltip] = useState(false);
@@ -21,6 +23,7 @@ export default function SetupHooksButton({ projectId, inline = false }: SetupHoo
       if (result.success) {
         setHooksPath(result.hooksPath);
         setStatus('success');
+        onSetup?.();
       } else {
         setStatus('error');
       }

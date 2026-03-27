@@ -7,6 +7,7 @@ import { loadProjects, saveProjects } from '../services/storage.js';
 import { readTeamFile, readDecisions, readOrchestrationLogs, readAgentDetails } from '../services/squad-reader.js';
 import { broadcast } from '../services/event-bridge.js';
 import { generateHooksConfig } from '../services/hooks-generator.js';
+import { validateProjectHooks } from '../services/hook-manager.js';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { findSessionByProject } from '../services/session-manager.js';
@@ -213,14 +214,8 @@ export function registerProjectHandlers(ipcMain: IpcMain): void {
     return { success: true };
   });
 
-  // projects:checkHooks — Check if hooks.json exists in the project
+  // projects:checkHooks — Validate hooks are properly configured in the project
   ipcMain.handle('projects:checkHooks', async (_event, { projectPath }: { projectPath: string }) => {
-    try {
-      const hooksJsonPath = path.join(projectPath, '.copilot', 'hooks.json');
-      await fs.access(hooksJsonPath);
-      return { configured: true };
-    } catch {
-      return { configured: false };
-    }
+    return validateProjectHooks(projectPath);
   });
 }

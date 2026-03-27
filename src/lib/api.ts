@@ -151,7 +151,17 @@ export function restartCopilotSession(sessionId: string, projectId: string, proj
   return window.electronAPI.invoke('sessions:restart', { sessionId, projectId, projectPath });
 }
 
-export function checkHooksConfigured(projectPath: string): Promise<{ configured: boolean }> {
+export interface HooksValidation {
+  configured: boolean;
+  hasHooksJson: boolean;
+  hasSessionEnd: boolean;
+  hasPostToolUse: boolean;
+  hasSessionStart: boolean;
+  hasScripts: boolean;
+  missing: string[];
+}
+
+export function checkHooksConfigured(projectPath: string): Promise<HooksValidation> {
   return window.electronAPI.invoke('projects:checkHooks', { projectPath });
 }
 

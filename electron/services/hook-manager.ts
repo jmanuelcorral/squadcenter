@@ -212,6 +212,88 @@ function mergeHooksConfig(existing: HooksConfig): HooksConfig {
 
 // ── Clean up signal files ──────────────────────────────────────
 
+// ── Validate hooks configuration ───────────────────────────────
+
+export interface HooksValidation {
+  configured: boolean;
+  hasHooksJson: boolean;
+  hasSessionEnd: boolean;
+  hasPostToolUse: boolean;
+  hasSessionStart: boolean;
+  hasScripts: boolean;
+  missing: string[];
+}
+
+const REQUIRED_HOOKS: Array<{ type: keyof HooksConfig['hooks']; label: string }> = [
+  { type: 'sessionEnd', label: 'sessionEnd' },
+  { type: 'postToolUse', label: 'postToolUse' },
+  { type: 'sessionStart', label: 'sessionStart' },
+];
+
+const REQUIRED_SCRIPTS = [
+  'session-end.ps1', 'session-end.sh',
+  'post-tool.ps1', 'post-tool.sh',
+  'session-start.ps1', 'session-start.sh',
+];
+
+export async function validateProjectHooks(projectPath: string): Promise<HooksValidation> {
+  const result: HooksValidation = {
+    configured: false,
+    hasHooksJson: false,
+    hasSessionEnd: false,
+    hasPostToolUse: false,
+    hasSessionStart: false,
+    hasScripts: false,
+    missing: [],
+  };
+
+  // 1. Check hooks.json exists and is valid JSON
+  const hooksJsonPath = path.join(projectPath, '.copilot', 'hooks.json');
+  let config: HooksConfig | null = null;
+  try {
+    config = JSON.parse(await fs.readFile(hooksJsonPath, 'utf-8')) as HooksConfig;
+    result.hasHooksJson = true;
+  } catch {
+    result.missing.push('hooks.json');
+    return result;
+  }
+
+  // 2. Check each required hook type has a squad-center-managed entry
+  for (const { type, label } of REQUIRED_HOOKS) {
+    const entries = config.hooks[type] ?? [];
+    const hasSquadEntry = entries.some(
+      (e) => (e as HookEntry & { comment?: string }).comment === SQUAD_COMMENT
+    );
+    if (type === 'sessionEnd') result.hasSessionEnd = hasSquadEntry;
+    if (type === 'postToolUse') result.hasPostToolUse = hasSquadEntry;
+    if (type === 'sessionStart') result.hasSessionStart = hasSquadEntry;
+    if (!hasSquadEntry) result.missing.push(`hook: ${label}`);
+  }
+
+  // 3. Check scripts exist on disk
+  const hooksPath = hooksDir(projectPath);
+  let allScriptsExist = true;
+  for (const script of REQUIRED_SCRIPTS) {
+    try {
+      await fs.access(path.join(hooksPath, script));
+    } catch {
+      allScriptsExist = false;
+      result.missing.push(`script: ${script}`);
+    }
+  }
+  result.hasScripts = allScriptsExist;
+
+  // Fully configured only if ALL checks pass
+  result.configured =
+    result.hasHooksJson &&
+    result.hasSessionEnd &&
+    result.hasPostToolUse &&
+    result.hasSessionStart &&
+    result.hasScripts;
+
+  return result;
+}
+
 export async function cleanupSignals(projectPath: string): Promise<void> {
   const sigDir = signalsDir(projectPath);
   try {
