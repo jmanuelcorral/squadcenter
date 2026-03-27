@@ -22,6 +22,8 @@ export default function ProjectCard({ project }: { project: Project }) {
   const [launching, setLaunching] = useState(false);
   const [launchingCopilot, setLaunchingCopilot] = useState(false);
   const [launchingBackground, setLaunchingBackground] = useState(false);
+  const [showPromptDialog, setShowPromptDialog] = useState(false);
+  const [backgroundPrompt, setBackgroundPrompt] = useState('');
   const [stoppingCopilot, setStoppingCopilot] = useState(false);
   const [hookEvents, setHookEvents] = useState<HookEvent[]>([]);
 
@@ -77,12 +79,18 @@ export default function ProjectCard({ project }: { project: Project }) {
 
   async function handleCopilotBackground(e: React.MouseEvent) {
     e.stopPropagation();
+    setShowPromptDialog(true);
+  }
+
+  async function handleBackgroundLaunch() {
+    if (!backgroundPrompt.trim()) return;
+    setShowPromptDialog(false);
     setLaunchingBackground(true);
     try {
-      await startCopilotSession(project.id, project.path);
-      // Don't navigate — session runs in background, notification will fire on completion
+      await startCopilotSession(project.id, project.path, backgroundPrompt.trim());
       const refreshed = await getProjectStatus(project.id);
       setStatus(refreshed);
+      setBackgroundPrompt('');
     } catch {
       // ignore
     } finally {
@@ -118,6 +126,34 @@ export default function ProjectCard({ project }: { project: Project }) {
   const hasRecentHookEvents = hookEvents.length > 0;
 
   return (
+    <>
+    {/* Background prompt dialog */}
+    {showPromptDialog && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowPromptDialog(false)}>
+        <div className="bg-slate-800 rounded-xl ring-1 ring-white/20 p-6 w-full max-w-lg shadow-2xl" onClick={e => e.stopPropagation()}>
+          <h3 className="text-lg font-semibold text-white mb-2">🚀 Launch Background Session</h3>
+          <p className="text-sm text-slate-400 mb-4">Enter the task for copilot to execute autonomously:</p>
+          <textarea
+            autoFocus
+            value={backgroundPrompt}
+            onChange={e => setBackgroundPrompt(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleBackgroundLaunch(); } }}
+            placeholder="e.g. Fix the failing tests in src/auth/"
+            className="w-full h-24 px-3 py-2 bg-slate-900/80 rounded-lg ring-1 ring-white/10 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 resize-none"
+          />
+          <div className="flex justify-end gap-2 mt-4">
+            <button onClick={() => setShowPromptDialog(false)} className="px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors">Cancel</button>
+            <button
+              onClick={handleBackgroundLaunch}
+              disabled={!backgroundPrompt.trim()}
+              className="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-600 disabled:text-slate-400 text-white rounded-lg transition-colors flex items-center gap-2"
+            >
+              <Rocket className="w-4 h-4" /> Launch
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
     <div
       onClick={() => navigate(`/project/${project.id}`)}
       className="group relative flex flex-col rounded-xl bg-slate-800/60 ring-1 ring-white/10 p-5 text-left transition-all duration-200 hover:ring-emerald-500/50 hover:bg-slate-800/80 hover:shadow-lg hover:shadow-emerald-500/5 cursor-pointer"
@@ -276,5 +312,6 @@ export default function ProjectCard({ project }: { project: Project }) {
         )}
       </div>
     </div>
+    </>
   );
 }
