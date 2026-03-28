@@ -208,3 +208,25 @@ Added two new sidebar panels to SessionView (2 new components, 2 modified files)
 - McpServersPanel takes `projectPath` prop (project-scoped), AzureAccountPanel takes no props (global Azure account)
 - Both panels follow existing sidebar pattern: `border-b border-white/5 px-4 py-3` container, skeleton loading, graceful error handling
 - Type badge color scheme: blue=stdio, green=sse, gray=unknown — consistent with protocol semantics
+
+### 2025-07-22 — Project README
+
+Created comprehensive README.md at repo root with full project documentation:
+
+- **Header:** Project name with badges (Electron, React, TypeScript, TailwindCSS)
+- **Description:** What Squad Center is and does — mission control for Copilot CLI + Squad agents
+- **Features:** 10 feature bullets with emoji — project management, sessions, xterm terminal, squad viz, notifications, hooks, stats, config, MCP servers, Azure account
+- **Tech Stack:** Table of all key technologies with versions
+- **Getting Started:** Prerequisites (Node 22+, Copilot CLI), clone/install/dev commands
+- **Scripts:** Table of all npm scripts with descriptions
+- **Project Structure:** Annotated directory tree covering electron/, src/, shared/, e2e/
+- **Configuration:** CopilotConfig interface with field descriptions
+- **Testing:** Playwright commands and test file coverage table (7 spec files)
+- **Building:** Vite + electron plugin build output explanation
+- **Contributing:** Squad team workflow mention with agent roles
+- **License:** MIT placeholder
+
+### 2025-07-21 (continued) — Team Coordination Summary
+- **Neo (Lead):** Designed release architecture using electron-builder + GitHub Releases, proposed ADR-7 for standardized release process
+- **Morpheus (Backend):** Created `.github/copilot-instructions.md`, `.github/workflows/ci.yml`, `.github/workflows/release.yml`; installed electron-builder and configured dist scripts
+- **Five inbox decisions merged into decisions.md:** CI/Release strategy, environment detection, PTY sessions, stats tracking, xterm.js terminal rendering

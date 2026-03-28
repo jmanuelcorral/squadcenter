@@ -158,3 +158,19 @@
 - No changes to IPC barrel (`index.ts`) needed — handlers register within existing `registerSessionHandlers()`
 - No `src/` files modified — Trinity owns the renderer
 - Build succeeds with zero errors
+
+### 2025-07-21 — Added CI/CD pipelines, Copilot instructions, and electron-builder config
+- Created `.github/copilot-instructions.md` — comprehensive project context for GitHub Copilot (architecture, patterns, build commands, Volta note)
+- Created `.github/workflows/ci.yml` — CI on push/PR to main: checkout, Node 22, npm ci, dual type-check (renderer + electron tsconfigs), vite build. Skips E2E (needs Electron display + Copilot CLI).
+- Created `.github/workflows/release.yml` — Release on `v*` tag push: matrix build across ubuntu/windows/macos, electron-builder per platform, publishes to GitHub Releases via `GITHUB_TOKEN`
+- Installed `electron-builder` as devDep, added `"build"` config to package.json (appId, NSIS/AppImage/deb/dmg targets, node-pty extraResources, github publish provider)
+- Added `pack`, `dist`, `dist:win`, `dist:linux`, `dist:mac` scripts to package.json
+- Added `release/` to `.gitignore` (electron-builder output directory)
+- Existing squad workflows untouched (squad-heartbeat, squad-issue-assign, squad-triage, sync-squad-labels)
+- Build verified clean after all changes
+
+### 2025-07-21 (continued) — Team Coordination Summary
+- **Neo (Lead):** Designed release architecture using electron-builder + GitHub Releases, proposed ADR-7 for standardized release process
+- **Trinity (Frontend):** Created comprehensive README.md with 13 sections (badges, features, tech stack, structure, testing, config docs)
+- **Five inbox decisions merged into decisions.md:** CI/Release strategy, environment detection, PTY sessions, stats tracking, xterm.js terminal rendering
+

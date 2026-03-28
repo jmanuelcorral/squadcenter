@@ -92,3 +92,113 @@ https://docs.github.com/en/copilot/reference/hooks-configuration
 - Hook types defined locally in api.ts (to be refactored to shared once synced)
 - Client-side active session detection from hook events (sessionStart vs sessionEnd timestamps)
 - CSS animations: animate-fade-in-up and animate-live-pulse as global keyframes in index.css
+
+---
+
+## CI/Release Pipeline Strategy (2025-07-21)
+
+**Author:** Morpheus (Backend Dev)  
+**Status:** Implemented
+
+### CI Pipeline (ci.yml)
+- Triggers on push/PR to `main` only
+- Runs on `ubuntu-latest`
+- Two type-check passes: `tsc --noEmit` (renderer) and `tsc --noEmit -p tsconfig.node.json` (electron)
+- Builds with `vite build` to verify full compilation
+- E2E tests skipped in CI (require Electron display and Copilot CLI)
+
+### Release Pipeline (release.yml)
+- Triggers on `v*` tag push (semantic versioning)
+- Matrix build across ubuntu-latest, windows-latest, macos-latest
+- electron-builder produces platform-specific distributables (NSIS, AppImage/deb, DMG)
+- Publishes to GitHub Releases using `GITHUB_TOKEN`
+- node-pty bundled as extraResource (native module can't be asar-packed)
+
+### electron-builder Config
+- `"build"` key in package.json keeps config co-located
+- Output directory: `release/` (gitignored)
+- NSIS configured for user-friendly custom install directory
+
+---
+
+## Environment Detection IPC Pattern (2025-07-20)
+
+**Author:** Morpheus (Backend Dev)  
+**Status:** Implemented
+
+### Decision
+- **MCP detection is per-project** — `sessions:getMcpServers` scans `.copilot/`, `.vscode/`, and user home, deduplicates by server name
+- **Azure detection is global** — `sessions:getAzureAccount` reflects globally logged-in account with 5-second timeout
+- **Handlers in `sessions.ts`** — both are session-context features
+
+### IPC Contract
+| Channel | Args | Returns |
+|---|---|---|
+| `sessions:getMcpServers` | `{ projectPath: string }` | `McpServer[]` |
+| `sessions:getAzureAccount` | _(none)_ | `AzureAccount \| null` |
+
+---
+
+## Copilot PTY Sessions with node-pty (2025-07-19)
+
+**Author:** Morpheus (Backend Dev)  
+**Status:** Implemented
+
+### Context
+Old `copilot -p "message"` one-shot approach couldn't support interactive TUI features. Users need a real terminal experience.
+
+### Solution
+Replaced exec pattern with `node-pty` spawning a persistent PTY process running `copilot` interactively.
+
+### IPC Contract Changes
+- **New event:** `event:session:ptyData` → `{ sessionId: string, data: string }` (raw PTY output)
+- **New IPC:** `sessions:resize` → `{ id: string, cols: number, rows: number }`
+- **Changed:** `sessions:sendInput` sends raw text to PTY (frontend sends `\r` for Enter)
+- **Removed:** Old structured `session:output` messages (all copilot output now via `session:ptyData`)
+
+### Impact
+- **Trinity (Frontend):** Must integrate xterm.js for copilot rendering
+- **Neo (Lead):** Ensure electron-rebuild runs on packaging (node-pty is a native module)
+
+---
+
+## PTY Stats Tracking (2025-07-19)
+
+**Author:** Morpheus (Backend Dev)  
+**Status:** Implemented
+
+### Decision
+- Parse PTY output line-by-line for stats patterns using regex
+- Only count what Copilot actually reports (no heuristics)
+- Broadcast `session:stats` events to renderer on changes
+- Expose `sessions:getStats` IPC handler for on-demand queries
+
+### IPC Contract
+- **Event:** `event:session:stats` → `{ sessionId: string, stats: { tokensIn, tokensOut, tokensTotal, premiumRequests, lastUpdated } }`
+- **Handler:** `sessions:getStats` → `{ id: string }` → `SessionStats | null`
+
+---
+
+## xterm.js for Terminal Rendering (2025-07-19)
+
+**Author:** Trinity (Frontend Dev)  
+**Status:** Implemented
+
+### Context
+Custom HTML-based `SessionTerminal` couldn't handle ANSI escape codes from Copilot CLI, had no proper scrollback, required manual text layout.
+
+### Decision
+Replace with xterm.js (`@xterm/xterm` v5+ with `@xterm/addon-fit`) for all terminal rendering. Terminal is **read-only** — user input remains in separate `ChatInput`.
+
+### Rationale
+- Natively handles ANSI escape codes, colors, cursor positioning (critical for Copilot CLI)
+- FitAddon provides responsive resizing without custom logic
+- 5000-line scrollback buffer vs unbounded DOM growth
+- Industry-standard (VS Code, Hyper, etc.)
+- `disableStdin: true` keeps it display-only
+
+### Impact
+- `SessionTerminal.tsx` fully rewritten
+- `SessionView.tsx` and `ChatInput.tsx` unchanged (same props interface)
+- New dependencies: `@xterm/xterm`, `@xterm/addon-fit`
+- Bundle size increase: ~340 KB uncompressed (~80 KB gzipped)
