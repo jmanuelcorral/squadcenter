@@ -10,7 +10,52 @@
     "preview": "vite preview",
     "test": "npx playwright test",
     "test:prereqs": "npx playwright test e2e/01-prerequisites.spec.ts",
-    "test:e2e": "npm run build && npx playwright test"
+    "test:e2e": "npm run build && npx playwright test",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "dist:win": "electron-builder --win",
+    "dist:linux": "electron-builder --linux",
+    "dist:mac": "electron-builder --mac"
+  },
+  "build": {
+    "appId": "com.squadcenter.app",
+    "productName": "Squad Center",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "node_modules/node-pty",
+        "to": "node_modules/node-pty",
+        "filter": ["**/*"]
+      }
+    ],
+    "win": {
+      "target": ["nsis"],
+      "icon": "electron/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "category": "Development",
+      "icon": "electron/icon.png"
+    },
+    "mac": {
+      "target": ["dmg"],
+      "icon": "electron/icon.png",
+      "category": "public.app-category.developer-tools"
+    },
+    "publish": {
+      "provider": "github"
+    }
   },
   "dependencies": {
     "@xterm/addon-fit": "^0.11.0",
@@ -30,6 +75,7 @@
     "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react": "^4.5.2",
     "electron": "^35.0.0",
+    "electron-builder": "^26.8.1",
     "tailwindcss": "^4.1.8",
     "tsx": "^4.19.4",
     "typescript": "^5.8.3",
