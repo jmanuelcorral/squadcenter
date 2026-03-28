@@ -23,6 +23,9 @@ interface SessionTerminalProps {
   sessionId?: string;
   active?: boolean;
   mode?: 'messages' | 'pty';
+  // Font customization
+  fontFamily?: string;
+  fontSize?: number;
 }
 
 const TERM_THEME = {
@@ -50,6 +53,9 @@ const TERM_THEME = {
   brightWhite: '#f0f6fc',
 };
 
+const DEFAULT_FONT_FAMILY = "'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'SF Mono', Menlo, Monaco, 'Courier New', monospace";
+const DEFAULT_FONT_SIZE = 13;
+
 export default function SessionTerminal({
   messages = [],
   loading,
@@ -57,6 +63,8 @@ export default function SessionTerminal({
   sessionId,
   active,
   mode = 'messages',
+  fontFamily,
+  fontSize,
 }: SessionTerminalProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
@@ -82,13 +90,16 @@ export default function SessionTerminal({
   useEffect(() => {
     if (!containerRef.current) return;
 
+    const resolvedFontFamily = fontFamily || DEFAULT_FONT_FAMILY;
+    const resolvedFontSize = fontSize || DEFAULT_FONT_SIZE;
+
     const term = new Terminal({
       cursorBlink: isPty,
       cursorStyle: 'bar',
       cursorInactiveStyle: isPty ? 'outline' : 'none',
       disableStdin: !isPty,
-      fontFamily: "'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'SF Mono', Menlo, Monaco, 'Courier New', monospace",
-      fontSize: 13,
+      fontFamily: resolvedFontFamily,
+      fontSize: resolvedFontSize,
       lineHeight: 1.5,
       letterSpacing: 0,
       theme: {
@@ -174,7 +185,7 @@ export default function SessionTerminal({
       terminalRef.current = null;
       fitAddonRef.current = null;
     };
-  }, [isPty, sessionId]);
+  }, [isPty, sessionId, fontFamily, fontSize]);
 
   // PTY mode: handle active→inactive transition
   useEffect(() => {

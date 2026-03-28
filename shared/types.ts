@@ -4,6 +4,8 @@ export interface CopilotConfig {
   preCommands: string[];
   startCopilot?: boolean;
   shell?: string;
+  terminalFontFamily?: string;
+  terminalFontSize?: number;
 }
 
 export interface Project {

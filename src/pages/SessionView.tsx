@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Square, Circle, Loader2, PanelRightOpen, PanelRightClose, Sparkles, RotateCcw, Terminal } from 'lucide-react';
-import { getSession, stopSession, sendSessionInput, startCopilotSession, checkHooksConfigured, restartCopilotSession } from '../lib/api';
-import type { Session, SessionMessage, HooksValidation } from '../lib/api';
+import { getSession, stopSession, sendSessionInput, startCopilotSession, checkHooksConfigured, restartCopilotSession, fetchProject } from '../lib/api';
+import type { Session, SessionMessage, HooksValidation, CopilotConfig } from '../lib/api';
 import { useIpcEvents } from '../hooks/useIpcEvents';
 import SessionTerminal from '../components/SessionTerminal';
 import ChatInput from '../components/ChatInput';
@@ -33,6 +33,7 @@ export default function SessionView() {
   const [thinking, setThinking] = useState(false);
   const [showActivity, setShowActivity] = useState(true);
   const [hooksStatus, setHooksStatus] = useState<HooksValidation | null>(null);
+  const [copilotConfig, setCopilotConfig] = useState<CopilotConfig | null>(null);
   const { messages: ipcMessages } = useIpcEvents();
   const lastIpcMsgIndexRef = useRef(0);
 
@@ -57,6 +58,14 @@ export default function SessionView() {
       .then((result) => setHooksStatus(result))
       .catch(() => setHooksStatus({ configured: false, hasHooksJson: false, hasSessionEnd: false, hasPostToolUse: false, hasSessionStart: false, hasScripts: false, missing: ['validation failed'] }));
   }, [session?.projectPath]);
+
+  // Load project config for terminal font settings
+  useEffect(() => {
+    if (!session?.projectId) return;
+    fetchProject(session.projectId)
+      .then((project) => setCopilotConfig(project.copilotConfig ?? null))
+      .catch(() => {});
+  }, [session?.projectId]);
 
   // Subscribe to IPC events for this session
   useEffect(() => {
@@ -280,9 +289,16 @@ export default function SessionView() {
               mode="pty"
               sessionId={session.id}
               active={isActive}
+              fontFamily={copilotConfig?.terminalFontFamily}
+              fontSize={copilotConfig?.terminalFontSize}
             />
           ) : (
-            <SessionTerminal messages={messages} thinking={isCopilot && thinking} />
+            <SessionTerminal
+              messages={messages}
+              thinking={isCopilot && thinking}
+              fontFamily={copilotConfig?.terminalFontFamily}
+              fontSize={copilotConfig?.terminalFontSize}
+            />
           )}
 
           {/* Input — hidden in PTY mode (terminal handles input directly) */}
