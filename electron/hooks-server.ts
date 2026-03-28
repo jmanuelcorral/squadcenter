@@ -72,6 +72,19 @@ export function startHooksServer(port = 3001): http.Server {
     console.log(`[squadCenter] Hooks HTTP server listening on port ${port}`);
   });
 
+  server.on('error', (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EADDRINUSE') {
+      console.warn(`[squadCenter] Port ${port} in use, trying port 0 (random)`);
+      server!.listen(0, () => {
+        const addr = server!.address();
+        const actualPort = typeof addr === 'object' && addr ? addr.port : '?';
+        console.log(`[squadCenter] Hooks HTTP server listening on port ${actualPort}`);
+      });
+    } else {
+      console.error('[squadCenter] Hooks server error:', err);
+    }
+  });
+
   return server;
 }
 

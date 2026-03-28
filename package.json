@@ -7,7 +7,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "npx playwright test",
+    "test:prereqs": "npx playwright test e2e/01-prerequisites.spec.ts",
+    "test:e2e": "npm run build && npx playwright test"
   },
   "dependencies": {
     "@xterm/addon-fit": "^0.11.0",
@@ -20,6 +23,7 @@
     "uuid": "^11.1.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@tailwindcss/vite": "^4.1.8",
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.6",
