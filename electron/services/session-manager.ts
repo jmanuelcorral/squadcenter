@@ -401,23 +401,22 @@ export function stopSession(sessionId: string): Session | null {
   const { session } = managed;
 
   if (session.status === 'active' || session.status === 'starting') {
-    if (session.type === 'copilot') {
-      if (managed.pty) {
-        try {
-          managed.pty.kill();
-        } catch {
-          // PTY may have already exited
-        }
+    // Kill PTY if present (copilot and shell sessions both use PTY)
+    if (managed.pty) {
+      try {
+        managed.pty.kill();
+      } catch {
+        // PTY may have already exited
       }
-      if (managed.logWatcher) {
-        managed.logWatcher.stop();
-      }
-    } else {
+    } else if (managed.process) {
       try {
         managed.process.kill();
       } catch {
         // Process may have already exited
       }
+    }
+    if (managed.logWatcher) {
+      managed.logWatcher.stop();
     }
     session.status = 'stopped';
     session.pid = undefined;

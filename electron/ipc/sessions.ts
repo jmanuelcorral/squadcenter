@@ -102,7 +102,7 @@ export function registerSessionHandlers(ipcMain: IpcMain): void {
     // Small delay for cleanup
     await new Promise(r => setTimeout(r, 500));
     // Load the project's saved copilotConfig
-    const projects = loadProjects();
+    const projects = await loadProjects();
     const project = projects.find(p => p.id === projectId);
     const session = await startCopilotSession(projectId, projectPath, project?.copilotConfig);
     return session;

@@ -151,10 +151,9 @@ export default function SessionView() {
     setRestarting(true);
     try {
       const newSession = await restartCopilotSession(id, session.projectId, session.projectPath);
-      // Navigate to the new session
       navigate(`/sessions/${newSession.id}`, { replace: true });
-    } catch {
-      // ignore
+    } catch (err) {
+      console.error('Failed to restart session:', err);
     } finally {
       setRestarting(false);
     }
