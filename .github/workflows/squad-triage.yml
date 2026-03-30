@@ -3,6 +3,7 @@ name: Squad Triage
 on:
   issues:
     types: [labeled]
+  workflow_dispatch:
 
 permissions:
   issues: write

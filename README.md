@@ -30,7 +30,9 @@ Think of it as a mission control dashboard: you configure projects, spin up Copi
 
 ## 📸 Screenshots
 
-> *Screenshots coming soon — run `npm run dev` to see it in action!*
+### Dashboard
+![Dashboard](docs/screenshots/dashboard.png)
+*Project overview with Squad agent team avatars, session launcher, and real-time monitoring status.*
 
 ## 🛠️ Tech Stack
 
@@ -58,7 +60,7 @@ Think of it as a mission control dashboard: you configure projects, spin up Copi
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/squadCenter.git
+git clone https://github.com/jmanuelcorral/squadcenter.git
 cd squadCenter
 
 # Install dependencies (includes native module compilation for node-pty)

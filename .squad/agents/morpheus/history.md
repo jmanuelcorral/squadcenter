@@ -174,3 +174,13 @@
 - **Trinity (Frontend):** Created comprehensive README.md with 13 sections (badges, features, tech stack, structure, testing, config docs)
 - **Five inbox decisions merged into decisions.md:** CI/Release strategy, environment detection, PTY sessions, stats tracking, xterm.js terminal rendering
 
+### 2026-03-26 — Added workflow_dispatch trigger to GitHub Actions workflows
+- Modified 4 workflows in `.github/workflows/` to support manual triggering from the GitHub UI:
+  - `ci.yml` — added `workflow_dispatch:` to triggers (now: push main, PR main, manual)
+  - `release.yml` — added `workflow_dispatch:` to triggers (now: push v* tags, manual)
+  - `squad-issue-assign.yml` — added `workflow_dispatch:` to triggers (now: issues labeled, manual)
+  - `squad-triage.yml` — added `workflow_dispatch:` to triggers (now: issues labeled, manual)
+- Verified 2 workflows already had `workflow_dispatch:` (sync-squad-labels.yml, squad-heartbeat.yml) — no changes needed
+- All workflows use `main` branch consistently (no stale references to `master`)
+- No existing functionality changed — only added the ability to trigger workflows manually from GitHub Actions UI
+- All six workflow files valid YAML with correct syntax
