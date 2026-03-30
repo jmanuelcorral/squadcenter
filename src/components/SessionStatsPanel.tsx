@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ArrowUpFromLine, Zap, MessageCircle, Wrench, RefreshCw } from 'lucide-react';
+import { ArrowDownToLine, ArrowUpFromLine, Sigma, Zap, MessageCircle, Wrench, RefreshCw } from 'lucide-react';
 import { getSessionStats, refreshSessionStats } from '../lib/api';
 import type { SessionStats } from '../lib/api';
 import CollapsiblePanel from './CollapsiblePanel';
@@ -15,14 +15,18 @@ function formatNumber(n: number): string {
 }
 
 const statCells = [
-  { key: 'tokensOut', label: 'Output', icon: ArrowUpFromLine, color: 'cyan' },
-  { key: 'premiumRequests', label: 'Premium', icon: Zap, color: 'amber' },
-  { key: 'turns', label: 'Turns', icon: MessageCircle, color: 'indigo' },
-  { key: 'toolCalls', label: 'Tool Calls', icon: Wrench, color: 'violet' },
+  { key: 'tokensIn',        label: 'Tokens In',   icon: ArrowDownToLine, color: 'teal' },
+  { key: 'tokensOut',       label: 'Tokens Out',  icon: ArrowUpFromLine, color: 'cyan' },
+  { key: 'tokensTotal',     label: 'Total',       icon: Sigma,           color: 'sky' },
+  { key: 'premiumRequests', label: 'Premium',     icon: Zap,             color: 'amber' },
+  { key: 'turns',           label: 'Turns',       icon: MessageCircle,   color: 'indigo' },
+  { key: 'toolCalls',       label: 'Tool Calls',  icon: Wrench,          color: 'violet' },
 ] as const;
 
 const colorMap: Record<string, { bg: string; icon: string; value: string }> = {
+  teal:   { bg: 'bg-teal-500/5',   icon: 'text-teal-400',   value: 'text-teal-300' },
   cyan:   { bg: 'bg-cyan-500/5',   icon: 'text-cyan-400',   value: 'text-cyan-300' },
+  sky:    { bg: 'bg-sky-500/5',    icon: 'text-sky-400',    value: 'text-sky-300' },
   amber:  { bg: 'bg-amber-500/5',  icon: 'text-amber-400',  value: 'text-amber-300' },
   indigo: { bg: 'bg-indigo-500/5', icon: 'text-indigo-400', value: 'text-indigo-300' },
   violet: { bg: 'bg-violet-500/5', icon: 'text-violet-400', value: 'text-violet-300' },
@@ -82,7 +86,7 @@ export default function SessionStatsPanel({ sessionId }: SessionStatsPanelProps)
         </button>
       }
     >
-      <div className="grid grid-cols-2 gap-1.5 px-4 pb-3">
+      <div className="grid grid-cols-3 gap-1.5 px-4 pb-3">
         {statCells.map(({ key, label, icon: Icon, color }) => {
           const c = colorMap[color];
           return (
