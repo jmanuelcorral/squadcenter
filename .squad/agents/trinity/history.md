@@ -230,3 +230,13 @@ Created comprehensive README.md at repo root with full project documentation:
 - **Neo (Lead):** Designed release architecture using electron-builder + GitHub Releases, proposed ADR-7 for standardized release process
 - **Morpheus (Backend):** Created `.github/copilot-instructions.md`, `.github/workflows/ci.yml`, `.github/workflows/release.yml`; installed electron-builder and configured dist scripts
 - **Five inbox decisions merged into decisions.md:** CI/Release strategy, environment detection, PTY sessions, stats tracking, xterm.js terminal rendering
+
+### 2026-03-30 — Token Breakdown Pattern
+
+Updated SessionStatsPanel component to display comprehensive token metrics in a 3x2 grid layout:
+- **Tokens In / Out / Total:** Full token breakdown showing usage across the session
+- **Premium Requests:** Separate metric for premium-tier request count
+- **Color Gradient:** Applied teal → cyan → sky gradient to group related token metrics visually
+- **Pattern:** Used TailwindCSS classes for responsive stat cards with consistent sizing and typography. Build validates with no errors.
+
+This pattern establishes the UI convention for displaying multi-metric breakdowns in sidebar panels — useful for future stats expansions (e.g., cache hits, session duration, cost).
