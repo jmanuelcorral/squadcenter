@@ -510,7 +510,7 @@ export async function forceRefreshStats(projectPath: string): Promise<CopilotSes
   const sessionDir = await findCopilotSessionDir(projectPath);
   if (!sessionDir) {
     console.log(LOG_PREFIX, 'Force refresh: no session dir found');
-    return { outputTokens: 0, premiumRequests: 0, turns: 0, toolCalls: 0, lastUpdated: '' };
+    return { inputTokens: 0, outputTokens: 0, totalTokens: 0, premiumRequests: 0, turns: 0, toolCalls: 0, lastUpdated: '' };
   }
   console.log(LOG_PREFIX, 'Force refresh: found dir', sessionDir);
   const eventsPath = path.join(sessionDir, 'events.jsonl');
