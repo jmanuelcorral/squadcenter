@@ -72,7 +72,7 @@ export interface ProjectStatus {
   working?: boolean;
   pid?: number;
   sessionId?: string;
-  sessionType?: 'copilot';
+  sessionType?: 'copilot' | 'shell';
   hookDetected?: boolean;
 }
 
