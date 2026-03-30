@@ -37,4 +37,4 @@ jobs:
         run: npx playwright install --with-deps
 
       - name: Run E2E tests (skip prerequisites — copilot CLI not available in CI)
-        run: xvfb-run --auto-servernum -- npx playwright test 'e2e/0[2-7]-*.spec.ts'
+        run: xvfb-run --auto-servernum -- npx playwright test --grep-invert "Prerequisites"
