@@ -4,7 +4,9 @@ import path from 'path';
 import os from 'os';
 
 export interface CopilotSessionStats {
+  inputTokens: number;
   outputTokens: number;
+  totalTokens: number;
   premiumRequests: number;
   turns: number;
   toolCalls: number;
@@ -95,7 +97,9 @@ async function findCopilotSessionDir(projectPath: string): Promise<string | null
 
 async function parseEventsFile(eventsPath: string): Promise<CopilotSessionStats> {
   const stats: CopilotSessionStats = {
+    inputTokens: 0,
     outputTokens: 0,
+    totalTokens: 0,
     premiumRequests: 0,
     turns: 0,
     toolCalls: 0,
@@ -117,6 +121,9 @@ async function parseEventsFile(eventsPath: string): Promise<CopilotSessionStats>
         const event = JSON.parse(line);
         switch (event.type) {
           case 'assistant.message':
+            if (event.data?.inputTokens) {
+              stats.inputTokens += event.data.inputTokens;
+            }
             if (event.data?.outputTokens) {
               stats.outputTokens += event.data.outputTokens;
             }
@@ -131,6 +138,7 @@ async function parseEventsFile(eventsPath: string): Promise<CopilotSessionStats>
         }
       } catch { /* skip malformed lines */ }
     }
+    stats.totalTokens = stats.inputTokens + stats.outputTokens;
     stats.lastUpdated = new Date().toISOString();
   } catch { /* file not readable */ }
 

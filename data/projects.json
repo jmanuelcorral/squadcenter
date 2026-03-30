@@ -5,7 +5,7 @@
     "path": "D:\\gitrepos\\personal\\sessionkeda",
     "description": "",
     "createdAt": "2026-03-25T13:29:30.853Z",
-    "updatedAt": "2026-03-27T16:49:18.078Z",
+    "updatedAt": "2026-03-28T07:25:10.196Z",
     "team": [
       {
         "name": "Keaton",
@@ -55,7 +55,9 @@
       "envVars": {},
       "preCommands": [],
       "startCopilot": true,
-      "shell": "C:\\Program Files\\PowerShell\\7\\pwsh.exe"
+      "shell": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+      "terminalFontFamily": "'FiraCode Nerd Font', 'Fira Code', monospace",
+      "terminalFontSize": 12
     }
   },
   {
@@ -117,7 +119,7 @@
     "path": "D:\\gitrepos\\personal\\sessionACRPrivateCaches",
     "description": "",
     "createdAt": "2026-03-25T16:15:29.159Z",
-    "updatedAt": "2026-03-27T16:05:49.959Z",
+    "updatedAt": "2026-03-28T19:18:47.005Z",
     "team": [
       {
         "name": "Neo",
@@ -166,7 +168,27 @@
       ],
       "envVars": {},
       "preCommands": [],
-      "startCopilot": false
+      "startCopilot": true
     }
+  },
+  {
+    "id": "0352dd05-4dce-4940-8458-f4bde2c4982d",
+    "name": "E2E-Test-1774690927698",
+    "path": "D:\\gitrepos\\personal\\squadCenter",
+    "description": "",
+    "createdAt": "2026-03-28T09:42:11.828Z",
+    "updatedAt": "2026-03-28T09:42:11.828Z",
+    "team": [],
+    "status": "active"
+  },
+  {
+    "id": "79ab12fd-9b6d-42a9-892b-760becd479eb",
+    "name": "E2E-Test-1774691027933",
+    "path": "D:\\gitrepos\\personal\\squadCenter",
+    "description": "",
+    "createdAt": "2026-03-28T09:43:52.152Z",
+    "updatedAt": "2026-03-28T09:43:52.152Z",
+    "team": [],
+    "status": "active"
   }
 ]

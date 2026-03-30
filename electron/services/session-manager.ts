@@ -332,9 +332,9 @@ export async function startCopilotSession(projectId: string, projectPath: string
     projectPath,
     (copilotStats) => {
       managed.stats = {
-        tokensIn: 0,
+        tokensIn: copilotStats.inputTokens,
         tokensOut: copilotStats.outputTokens,
-        tokensTotal: copilotStats.outputTokens,
+        tokensTotal: copilotStats.totalTokens,
         premiumRequests: copilotStats.premiumRequests,
         turns: copilotStats.turns,
         toolCalls: copilotStats.toolCalls,
@@ -488,9 +488,9 @@ export async function refreshSessionStats(sessionId: string): Promise<SessionSta
   const projectPath = managed.session.projectPath;
   const copilotStats = await forceRefreshStats(projectPath);
   managed.stats = {
-    tokensIn: 0,
+    tokensIn: copilotStats.inputTokens,
     tokensOut: copilotStats.outputTokens,
-    tokensTotal: copilotStats.outputTokens,
+    tokensTotal: copilotStats.totalTokens,
     premiumRequests: copilotStats.premiumRequests,
     turns: copilotStats.turns,
     toolCalls: copilotStats.toolCalls,

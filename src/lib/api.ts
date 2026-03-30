@@ -283,7 +283,9 @@ export interface SessionHistoryEntry {
   sessionDir: string;
   startedAt: string;
   stats: {
+    inputTokens: number;
     outputTokens: number;
+    totalTokens: number;
     premiumRequests: number;
     turns: number;
     toolCalls: number;

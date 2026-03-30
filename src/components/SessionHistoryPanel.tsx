@@ -1,7 +1,16 @@
 import { useState, useEffect } from 'react';
-import { History, Zap, MessageCircle, Wrench, Users, ChevronRight, ArrowUpFromLine } from 'lucide-react';
+import { History, Zap, MessageCircle, Wrench, Users, ChevronRight, ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
 import { getSessionHistory } from '../lib/api';
 import type { SessionHistoryEntry } from '../lib/api';
+
+// Sigma icon inline (lucide-react doesn't export it directly in all versions)
+function SigmaIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M18 6H6l6 6-6 6h12" />
+    </svg>
+  );
+}
 
 interface SessionHistoryPanelProps {
   projectPath: string;
@@ -63,12 +72,26 @@ function SessionCard({ entry, index }: { entry: SessionHistoryEntry; index: numb
       {expanded && (
         <div className="px-3 pb-3 space-y-2 border-t border-white/5">
           {/* Stats grid */}
-          <div className="grid grid-cols-2 gap-1.5 mt-2">
+          <div className="grid grid-cols-3 gap-1.5 mt-2">
+            <div className="flex items-center gap-2 rounded-md bg-teal-500/5 px-2.5 py-1.5">
+              <ArrowDownToLine className="w-3 h-3 text-teal-400 flex-shrink-0" />
+              <div>
+                <p className="text-[8px] text-slate-500 leading-none">Input</p>
+                <p className="text-[11px] font-bold font-mono text-teal-300">{formatNumber(stats.inputTokens)}</p>
+              </div>
+            </div>
             <div className="flex items-center gap-2 rounded-md bg-cyan-500/5 px-2.5 py-1.5">
               <ArrowUpFromLine className="w-3 h-3 text-cyan-400 flex-shrink-0" />
               <div>
-                <p className="text-[8px] text-slate-500 leading-none">Output Tokens</p>
+                <p className="text-[8px] text-slate-500 leading-none">Output</p>
                 <p className="text-[11px] font-bold font-mono text-cyan-300">{formatNumber(stats.outputTokens)}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 rounded-md bg-sky-500/5 px-2.5 py-1.5">
+              <SigmaIcon className="w-3 h-3 text-sky-400 flex-shrink-0" />
+              <div>
+                <p className="text-[8px] text-slate-500 leading-none">Total</p>
+                <p className="text-[11px] font-bold font-mono text-sky-300">{formatNumber(stats.totalTokens)}</p>
               </div>
             </div>
             <div className="flex items-center gap-2 rounded-md bg-amber-500/5 px-2.5 py-1.5">
@@ -139,11 +162,13 @@ export default function SessionHistoryPanel({ projectPath }: SessionHistoryPanel
     (acc, entry) => ({
       turns: acc.turns + entry.stats.turns,
       premium: acc.premium + entry.stats.premiumRequests,
-      tokens: acc.tokens + entry.stats.outputTokens,
+      inputTokens: acc.inputTokens + entry.stats.inputTokens,
+      outputTokens: acc.outputTokens + entry.stats.outputTokens,
+      totalTokens: acc.totalTokens + entry.stats.totalTokens,
       tools: acc.tools + entry.stats.toolCalls,
       agents: acc.agents + entry.agentSummary.total,
     }),
-    { turns: 0, premium: 0, tokens: 0, tools: 0, agents: 0 },
+    { turns: 0, premium: 0, inputTokens: 0, outputTokens: 0, totalTokens: 0, tools: 0, agents: 0 },
   );
 
   return (
@@ -158,19 +183,23 @@ export default function SessionHistoryPanel({ projectPath }: SessionHistoryPanel
 
       {/* Aggregate stats bar */}
       {!loading && history.length > 0 && (
-        <div className="flex items-center gap-3 px-4 py-2 border-b border-white/5 bg-slate-900/30">
+        <div className="flex items-center gap-3 px-4 py-2 border-b border-white/5 bg-slate-900/30 flex-wrap">
           <span className="text-[10px] text-slate-500">Totals:</span>
-          <span className="flex items-center gap-1 text-[10px] text-indigo-400">
-            <MessageCircle className="w-3 h-3" />
-            {formatNumber(totals.turns)} turns
+          <span className="flex items-center gap-1 text-[10px] text-teal-400">
+            <ArrowDownToLine className="w-3 h-3" />
+            {formatNumber(totals.inputTokens)} in
+          </span>
+          <span className="flex items-center gap-1 text-[10px] text-cyan-400">
+            <ArrowUpFromLine className="w-3 h-3" />
+            {formatNumber(totals.outputTokens)} out
           </span>
           <span className="flex items-center gap-1 text-[10px] text-amber-400">
             <Zap className="w-3 h-3" />
             {formatNumber(totals.premium)} premium
           </span>
-          <span className="flex items-center gap-1 text-[10px] text-cyan-400">
-            <ArrowUpFromLine className="w-3 h-3" />
-            {formatNumber(totals.tokens)} tokens
+          <span className="flex items-center gap-1 text-[10px] text-indigo-400">
+            <MessageCircle className="w-3 h-3" />
+            {formatNumber(totals.turns)} turns
           </span>
           {totals.agents > 0 && (
             <span className="flex items-center gap-1 text-[10px] text-violet-400">
