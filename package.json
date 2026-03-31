@@ -10,7 +10,7 @@
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/josecorral/squadCenter.git"
+    "url": "https://github.com/jmanuelcorral/squadcenter.git"
   },
   "main": "dist-electron/main.js",
   "scripts": {
