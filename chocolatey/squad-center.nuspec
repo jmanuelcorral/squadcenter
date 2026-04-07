@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.chocolatey.org/packaging/2015/06/nuspec.xsd">
   <metadata>
     <id>squad-center</id>
-    <version>0.1.1</version>
+    <version>0.2.0</version>
     <title>Squad Center</title>
     <authors>jmanuelcorral</authors>
     <owners>jmanuelcorral</owners>

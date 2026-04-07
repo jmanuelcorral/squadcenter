@@ -1,7 +1,7 @@
 $ErrorActionPreference = 'Stop'
 
 $packageName = 'squad-center'
-$version     = '0.1.1'
+$version     = '0.2.0'
 $url         = "https://github.com/jmanuelcorral/squadcenter/releases/download/v${version}/Squad-Center-Setup-${version}.exe"
 
 # Fill checksum during CI/release (e.g., Get-FileHash -Algorithm SHA256)

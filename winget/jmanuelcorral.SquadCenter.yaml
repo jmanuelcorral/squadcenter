@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://aka.ms/winget-manifest.singleton.1.6.0.schema.json
 PackageIdentifier: jmanuelcorral.SquadCenter
-PackageVersion: 0.1.1
+PackageVersion: 0.2.0
 PackageLocale: en-US
 Publisher: jmanuelcorral
 PublisherUrl: https://github.com/jmanuelcorral
@@ -19,7 +19,7 @@ Tags:
 Installers:
   - Architecture: x64
     InstallerType: nsis
-    InstallerUrl: https://github.com/jmanuelcorral/squadcenter/releases/download/v0.1.1/Squad-Center-Setup-0.1.1.exe
+    InstallerUrl: https://github.com/jmanuelcorral/squadcenter/releases/download/v0.2.0/Squad-Center-Setup-0.2.0.exe
     InstallerSha256: ""
     InstallerSwitches:
       Silent: /S
