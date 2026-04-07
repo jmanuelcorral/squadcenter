@@ -6,8 +6,20 @@
     "name": "Jose Corral",
     "email": "jose.manuel.corral@gmail.com"
   },
-  "private": true,
   "type": "module",
+  "bin": {
+    "squad-center": "bin/squad-center.js"
+  },
+  "files": [
+    "bin/",
+    "scripts/install.js",
+    "scripts/postinstall.js",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/jmanuelcorral/squadcenter.git"
@@ -20,7 +32,7 @@
     "test": "npx playwright test",
     "test:prereqs": "npx playwright test e2e/01-prerequisites.spec.ts",
     "test:e2e": "npm run build && npx playwright test",
-    "postinstall": "node scripts/patch-node-pty.js",
+    "postinstall": "node scripts/postinstall.js",
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
     "dist:win": "electron-builder --win",

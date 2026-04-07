@@ -1,0 +1,28 @@
+# Development files - not needed in npm package
+electron/
+src/
+shared/
+dist/
+dist-electron/
+e2e/
+public/
+data/
+docs/
+release/
+node_modules/
+test-results/
+playwright-report/
+.squad/
+.github/
+
+# Config files
+*.config.ts
+*.config.js
+tsconfig*.json
+index.html
+
+# Development scripts (only install.js and postinstall.js are needed)
+scripts/patch-node-pty.js
+
+# Cached binaries should not be published
+bin/.cache/

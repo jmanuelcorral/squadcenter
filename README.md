@@ -56,7 +56,47 @@ Think of it as a mission control dashboard: you configure projects, spin up Copi
 - **GitHub Copilot CLI** installed and authenticated
 - **Squad agent** configuration (optional — for team features)
 
-### Install & Run
+### Install
+
+Choose your preferred installation method:
+
+#### 📦 npm (all platforms)
+```bash
+npm install -g squad-center
+squad-center
+```
+
+#### 🍫 Chocolatey (Windows)
+```powershell
+choco install squad-center
+```
+
+#### 🪟 winget (Windows)
+```powershell
+winget install jmanuelcorral.SquadCenter
+```
+
+#### 🐧 apt (Debian/Ubuntu)
+```bash
+# Add the GPG key
+curl -fsSL https://jmanuelcorral.github.io/squadcenter/gpg-key.public \
+  | sudo gpg --dearmor -o /usr/share/keyrings/squad-center.gpg
+
+# Add the repository
+echo "deb [signed-by=/usr/share/keyrings/squad-center.gpg] https://jmanuelcorral.github.io/squadcenter/apt stable main" \
+  | sudo tee /etc/apt/sources.list.d/squad-center.list
+
+# Install
+sudo apt update && sudo apt install squad-center
+```
+
+#### 📥 Direct download
+Grab the latest installer from [GitHub Releases](https://github.com/jmanuelcorral/squadcenter/releases):
+- **Windows:** `Squad-Center-Setup-x.y.z.exe`
+- **macOS:** `Squad-Center-x.y.z-arm64.dmg`
+- **Linux:** `Squad-Center-x.y.z.AppImage` or `squad-center_x.y.z_amd64.deb`
+
+### Development Setup
 
 ```bash
 # Clone the repository
@@ -182,6 +222,7 @@ npx playwright test e2e/03-dashboard.spec.ts
 | `05-project-config.spec.ts` | Configuration modal and persistence |
 | `06-navigation.spec.ts` | Routing and navigation flows |
 | `07-ipc-communication.spec.ts` | IPC channel communication |
+| `08-notifications-hooks.spec.ts` | Notifications pipeline & hooks |
 
 ## 🏗️ Building
 
@@ -203,6 +244,7 @@ Squad Center is built using a **Squad agent team** workflow. The team configurat
 - **Neo** — Lead architect and coordinator
 - **Morpheus** — Backend developer (Electron main process, IPC, services)
 - **Trinity** — Frontend developer (React, UI components, UX)
+- **Tank** — DevOps engineer (CI/CD, packaging, release pipelines)
 
 Architectural decisions are documented in `.squad/decisions.md`.
 

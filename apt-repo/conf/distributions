@@ -1,0 +1,8 @@
+Origin: jmanuelcorral
+Label: Squad Center
+Suite: stable
+Codename: stable
+Architectures: amd64
+Components: main
+Description: Squad Center - GitHub Copilot CLI session orchestrator
+SignWith: default

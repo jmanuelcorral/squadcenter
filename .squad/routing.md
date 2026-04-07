@@ -13,6 +13,7 @@ How to decide who handles what.
 | Testing | Switch | Write tests, find edge cases, verify fixes |
 | Scope & priorities | Neo | What to build next, trade-offs, decisions |
 | Async issue work (bugs, tests, small features) | @copilot 🤖 | Well-defined tasks matching capability profile |
+| CI/CD & packaging | Tank | GitHub Actions, release pipelines, package managers, build config |
 | Session logging | Scribe | Automatic — never needs routing |
 
 ## Issue Routing

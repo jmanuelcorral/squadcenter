@@ -17,6 +17,7 @@
 | Morpheus | Backend Dev | .squad/agents/morpheus/charter.md | 🔧 Active |
 | Switch | Tester | .squad/agents/switch/charter.md | 🧪 Active |
 | Scribe | Scribe | .squad/agents/scribe/charter.md | 📋 Active |
+| Tank | DevOps | .squad/agents/tank/charter.md | ⚙️ Active |
 | Ralph | Work Monitor | — | 🔄 Monitor |
 
 ## Project Context

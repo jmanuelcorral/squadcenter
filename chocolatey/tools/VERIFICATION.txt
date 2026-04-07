@@ -1,0 +1,26 @@
+VERIFICATION
+
+Verification is intended to assist the Chocolatey moderators and community in
+verifying that this package's contents are trustworthy.
+
+The installer is downloaded directly from the official GitHub Releases page for
+the Squad Center project:
+
+  Project:  https://github.com/jmanuelcorral/squadcenter
+  Releases: https://github.com/jmanuelcorral/squadcenter/releases
+
+To verify the installer:
+
+1. Download the installer from:
+   https://github.com/jmanuelcorral/squadcenter/releases/download/v0.1.1/Squad-Center-Setup-0.1.1.exe
+
+2. Compute the SHA-256 hash:
+   Get-FileHash Squad-Center-Setup-0.1.1.exe -Algorithm SHA256
+
+3. Compare the computed hash with the checksum value in chocolateyInstall.ps1.
+
+The package source code is available at:
+  https://github.com/jmanuelcorral/squadcenter
+
+License: MIT
+  https://github.com/jmanuelcorral/squadcenter/blob/main/LICENSE

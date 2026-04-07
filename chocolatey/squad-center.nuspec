@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.chocolatey.org/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>squad-center</id>
+    <version>0.1.1</version>
+    <title>Squad Center</title>
+    <authors>jmanuelcorral</authors>
+    <owners>jmanuelcorral</owners>
+    <projectUrl>https://github.com/jmanuelcorral/squadcenter</projectUrl>
+    <iconUrl>https://raw.githubusercontent.com/jmanuelcorral/squadcenter/main/electron/icon.png</iconUrl>
+    <licenseUrl>https://github.com/jmanuelcorral/squadcenter/blob/main/LICENSE</licenseUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Desktop app for orchestrating GitHub Copilot CLI sessions with Squad agent teams. Manage projects, spawn interactive terminals, track agent activity, and receive real-time updates.</description>
+    <summary>Orchestrate GitHub Copilot CLI sessions with Squad agent teams</summary>
+    <tags>github copilot cli squad agent electron developer-tools</tags>
+    <packageSourceUrl>https://github.com/jmanuelcorral/squadcenter</packageSourceUrl>
+    <bugTrackerUrl>https://github.com/jmanuelcorral/squadcenter/issues</bugTrackerUrl>
+    <releaseNotes>https://github.com/jmanuelcorral/squadcenter/releases</releaseNotes>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>
