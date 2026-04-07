@@ -67,7 +67,8 @@
     "nsis": {
       "oneClick": false,
       "perMachine": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "Squad-Center-Setup-${version}.${ext}"
     },
     "linux": {
       "target": [
