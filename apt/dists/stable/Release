@@ -2,19 +2,19 @@ Origin: jmanuelcorral
 Label: Squad Center
 Suite: stable
 Codename: stable
-Date: Tue, 07 Apr 2026 14:18:20 UTC
+Date: Tue, 07 Apr 2026 14:32:29 UTC
 Architectures: amd64
 Components: main
 Description: Squad Center - GitHub Copilot CLI session orchestrator
 MD5Sum:
- 5618498505858eb0a36562bf0ddcdb90 782 main/binary-amd64/Packages
- f4bb19dcc916664699000f86a1aaf6ed 521 main/binary-amd64/Packages.gz
+ 6bbf5e161e1967e9ba307a8e71540287 782 main/binary-amd64/Packages
+ 518b5e4a6133904c56ed3f960895b1c8 521 main/binary-amd64/Packages.gz
  f9f8dab180e232b7020f1275cd397013 162 main/binary-amd64/Release
 SHA1:
- 9a2c0b89d6867958ec147854b4bbbfe04829994b 782 main/binary-amd64/Packages
- 426521c322c4865cf8323606cec4f85f6bda5726 521 main/binary-amd64/Packages.gz
+ eafc9e610e13e8f88d2a3ef57c04497bf3c5f01c 782 main/binary-amd64/Packages
+ 5da2c300c55a604c97c2508d2a0cd681f840beb4 521 main/binary-amd64/Packages.gz
  ddea2a107b5177e45500dfada949b1cf24c5d890 162 main/binary-amd64/Release
 SHA256:
- 12d43425b4de70175545eaa9bec85de0f68cea7ca821dc5449a211f15b8be533 782 main/binary-amd64/Packages
- a261704aaa3f07a91ce2c6024c866c10eb7de6783be91324e8336ed44ce28acd 521 main/binary-amd64/Packages.gz
+ 29edda7b37f6eae1379c1e55cfc5836414ea6361c61fdb117177c64fa2d5770b 782 main/binary-amd64/Packages
+ 872affb513f809365f80e43ab1d3a9e5cc2946acc43c0e3cd4a9071d26f85747 521 main/binary-amd64/Packages.gz
  e20ba125a27395136ad6cc3ed795c5b71dc221d15f1f1c9a47a78eacb2016ff0 162 main/binary-amd64/Release
