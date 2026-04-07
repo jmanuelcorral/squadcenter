@@ -1,0 +1,6 @@
+Archive: stable
+Component: main
+Origin: jmanuelcorral
+Label: Squad Center
+Architecture: amd64
+Description: Squad Center - GitHub Copilot CLI session orchestrator

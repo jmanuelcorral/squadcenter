@@ -1,0 +1,20 @@
+Package: squad-center
+Version: 0.2.1
+License: unknown
+Vendor: Jose Corral <jose.manuel.corral@gmail.com>
+Architecture: amd64
+Maintainer: Jose Corral <jose.manuel.corral@gmail.com>
+Installed-Size: 387959
+Depends: libgtk-3-0, libnotify4, libnss3, libxss1, libxtst6, xdg-utils, libatspi2.0-0, libuuid1, libsecret-1-0
+Recommends: libappindicator3-1
+Homepage: https://github.com/jmanuelcorral/squadcenter#readme
+Priority: optional
+Section: default
+Filename: pool/main/s/squad-center/squad-center_0.2.1_amd64.deb
+Size: 102844724
+SHA256: 526b5583898824126bd7d5128083140e40cc7ffec8ac96472f1980d4fb48c7ce
+SHA1: ecdc7fd8328b27334b0e217b6ecea8c8224f53f8
+MD5sum: f6798b8835cb65475a3f78101e959105
+Description: 
+  Desktop app for orchestrating GitHub Copilot CLI sessions with Squad agent teams
+
