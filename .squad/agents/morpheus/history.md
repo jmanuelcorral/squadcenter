@@ -184,3 +184,24 @@
 - All workflows use `main` branch consistently (no stale references to `master`)
 - No existing functionality changed — only added the ability to trigger workflows manually from GitHub Actions UI
 - All six workflow files valid YAML with correct syntax
+
+### 2025-07-22 — Fixed hooks server port propagation + missing IPC event constants
+- **Problem 1:** When port 3001 was busy, hooks server fell back to a random port but never exported it. `hooks-generator.ts` and `ipc/projects.ts` both hardcoded `http://localhost:3001`, so all generated hook scripts would POST to the wrong URL and events would be silently lost.
+- **Fix:** Added module-level `actualPort` variable in `hooks-server.ts`, set in both the happy-path `listen` callback and the `EADDRINUSE` fallback. Exported `getHooksServerPort()` and `getHooksServerUrl()`. Changed `startHooksServer()` from sync `http.Server` return to `Promise<http.Server>` so callers know the port is ready before proceeding. Updated `main.ts` to `await startHooksServer(3001)`. Updated `hooks-generator.ts` default param to use `getHooksServerUrl()`. Replaced hardcoded URL in `ipc/projects.ts` `setupHooks` handler with `getHooksServerUrl()`. Reset `actualPort` to null in `stopHooksServer()`.
+- **Problem 2:** `event-bridge.ts` EventType union includes `session:ptyData`, `session:stats`, `session:agentActivity`, and `agent-status-changed`, but `shared/ipc-channels.ts` `IPC_EVENTS` only had 5 of the 9 event types.
+- **Fix:** Added `SESSION_PTY_DATA`, `SESSION_STATS`, `SESSION_AGENT_ACTIVITY`, and `AGENT_STATUS_CHANGED` to `IPC_EVENTS` in `shared/ipc-channels.ts`.
+- Files modified: `electron/hooks-server.ts`, `electron/main.ts`, `electron/services/hooks-generator.ts`, `electron/ipc/projects.ts`, `shared/ipc-channels.ts`
+- Build succeeds with zero errors
+
+### 2025-07-22 — Fixed electron-builder releaseType for publish compatibility
+- **Problem:** v0.1.1 release had zero assets despite successful workflow runs. electron-builder logs showed: `skipped publishing file=Squad-Center-Setup-0.1.1.exe reason=existing type not compatible`. electron-builder defaults to `publishingType=draft` but the release was created as published (non-draft) via `gh release create v0.1.1`, so types didn't match.
+- **Root cause:** electron-builder's default behavior is to only upload to draft releases unless explicitly configured otherwise. When `gh release create` (or workflows) create a published release first, electron-builder refuses to upload because the existing release type (published) doesn't match its publishing type (draft).
+- **Fix:** Added `"releaseType": "release"` to `package.json` `build.publish` section. This tells electron-builder to upload to existing published releases, not just drafts.
+- **Recovery:** Deleted the empty v0.1.1 release and tag (`gh release delete v0.1.1 --yes`, `git push origin :refs/tags/v0.1.1`), committed the package.json fix, pushed to main, re-created the release via `gh release create v0.1.1` with full notes. The tag push re-triggered the Release workflow, and electron-builder correctly uploaded all 9 assets (exe, dmg, AppImage, deb + blockmaps + metadata YAML).
+- **Lesson:** When using electron-builder with GitHub Releases, always set `releaseType` explicitly to match your workflow. Use `"releaseType": "draft"` if workflows create draft releases, or `"releaseType": "release"` if using `gh release create` without `--draft` flag or manual published releases.
+
+### 2026-04-07 — Release fix re-triggered and verified successful
+- **Context:** v0.1.1 release had been created but all 9 assets (exe, dmg, AppImage, deb + blockmaps + yml) were missing due to the releaseType mismatch documented above.
+- **Actions:** Deleted empty release, re-created v0.1.1 via `gh release create` with full notes, pushed tag to trigger Release workflow. electron-builder ran with the fixed `releaseType: "release"` config and correctly uploaded all binaries.
+- **Verification:** All 9 assets now present in GitHub releases — release process is stable and automated for both manual and tag-push triggers.
+- **Team impact:** No further action required — release pipeline is robust and ready for v0.1.2 and beyond.

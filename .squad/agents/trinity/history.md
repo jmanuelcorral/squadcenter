@@ -240,3 +240,13 @@ Updated SessionStatsPanel component to display comprehensive token metrics in a 
 - **Pattern:** Used TailwindCSS classes for responsive stat cards with consistent sizing and typography. Build validates with no errors.
 
 This pattern establishes the UI convention for displaying multi-metric breakdowns in sidebar panels — useful for future stats expansions (e.g., cache hits, session duration, cost).
+
+### 2026-04-07 — IPC Message ID Tracking Fix
+
+Fixed critical message-tracking bug across 4 files. The `useIpcEvents` array-capping (200→100) broke all consumers that tracked position by array index.
+
+- **Root cause:** Array cap via `slice(-100)` invalidated index-based refs (`lastIpcMsgIndexRef`, `processedCount`) — consumers thought they'd seen everything and stopped processing.
+- **Fix pattern:** Added monotonically incrementing `id` field to `IpcMessage` (module-level `let nextMsgId = 0`). All consumers now use `lastProcessedIdRef = useRef(-1)` and filter by `m.id > lastProcessedIdRef.current`.
+- **Files changed:** `src/hooks/useIpcEvents.ts`, `src/pages/SessionView.tsx`, `src/components/ActivityTimeline.tsx`, `src/hooks/useNotifications.tsx`
+- **ActivityTimeline bonus:** Fixed single-message check (only looked at last array element) → now batch-processes all new hook events via filter.
+- **Key insight:** Module-level counters survive React re-renders and component remounts — correct for global IPC state. The `id` is independent of array position, so capping is safe.

@@ -202,3 +202,132 @@ Replace with xterm.js (`@xterm/xterm` v5+ with `@xterm/addon-fit`) for all termi
 - `SessionView.tsx` and `ChatInput.tsx` unchanged (same props interface)
 - New dependencies: `@xterm/xterm`, `@xterm/addon-fit`
 - Bundle size increase: ~340 KB uncompressed (~80 KB gzipped)
+
+---
+
+## Hooks Server Port Propagation (2025-07-22)
+
+**Author:** Morpheus (Backend Dev)  
+**Status:** Implemented
+
+### Context
+The hooks HTTP server falls back to a random port when 3001 is in use (EADDRINUSE). Previously, the actual port was only logged to console — never exported. Both `hooks-generator.ts` and the `projects:setupHooks` IPC handler hardcoded `http://localhost:3001`, meaning all generated hook scripts would silently POST to the wrong URL if the fallback port was used.
+
+### Decision
+1. `startHooksServer()` now returns `Promise<http.Server>` instead of `http.Server` — callers must `await` it so the port is known before any hooks are generated.
+2. Module-level `actualPort` variable tracks the real listening port, exposed via `getHooksServerPort()` and `getHooksServerUrl()`.
+3. All consumers (`hooks-generator.ts` default param, `projects:setupHooks` handler) now call `getHooksServerUrl()` instead of hardcoding port 3001.
+4. `stopHooksServer()` resets `actualPort` to null.
+
+### Impact
+- **Breaking change:** `startHooksServer()` signature changed from sync to async. Only caller is `main.ts` (already in an async block) — updated to `await`.
+- Hook scripts will now always POST to the correct port, even under port-conflict fallback.
+- No frontend changes required — this is entirely backend plumbing.
+
+---
+
+## electron-builder releaseType Configuration (2025-07-22)
+
+**Author:** Morpheus (Backend Dev)  
+**Date:** 2025-07-22  
+**Status:** Implemented
+
+### Context
+The v0.1.1 GitHub release was created successfully by the Release workflow, but all binary assets (exe, dmg, AppImage, deb) were missing. electron-builder skipped publishing every file with the error:
+```
+GitHub release not created  reason=existing type not compatible with publishing type
+  tag=v0.1.1  version=0.1.1  existingType=release  publishingType=draft
+skipped publishing  file=Squad-Center-Setup-0.1.1.exe  reason=existing type not compatible
+```
+
+### Root Cause
+electron-builder defaults to `publishingType=draft`. When a release already exists and was created as a published (non-draft) release, electron-builder refuses to upload assets because the types don't match. Our workflow uses `gh release create v0.1.1` (no `--draft` flag), which creates a published release by default.
+
+### Decision
+Added `"releaseType": "release"` to `package.json` `build.publish` section to tell electron-builder to upload assets to existing **published** releases, not just drafts.
+
+### Recovery Actions
+1. Deleted the empty v0.1.1 release: `gh release delete v0.1.1 --yes`
+2. Deleted the v0.1.1 tag locally and remotely: `git push origin :refs/tags/v0.1.1`
+3. Committed the package.json fix with proper commit message
+4. Pushed to main
+5. Re-created the release: `gh release create v0.1.1 --title "..." --notes "..."`
+6. Tag push re-triggered the Release workflow
+7. electron-builder correctly uploaded all 9 assets (6 binaries + 3 YAML metadata files)
+
+### Rationale
+- Aligns electron-builder behavior with our workflow pattern (manual release creation via `gh release create`)
+- Prevents silent upload failures when releases are created outside of electron-builder
+- Works for both `workflow_dispatch` triggers and tag push triggers
+
+---
+
+## Add workflow_dispatch to GitHub Actions Workflows (2026-03-26)
+
+**Author:** Morpheus (Backend Dev)  
+**Status:** Implemented
+
+### Summary
+Added `workflow_dispatch:` trigger to four GitHub Actions workflows to allow manual triggering from the GitHub UI.
+
+### Workflows Modified
+1. **ci.yml** — Added `workflow_dispatch:` to triggers
+2. **release.yml** — Added `workflow_dispatch:` to triggers
+3. **squad-issue-assign.yml** — Added `workflow_dispatch:` to triggers
+4. **squad-triage.yml** — Added `workflow_dispatch:` to triggers
+
+### Workflows Already Configured
+- `sync-squad-labels.yml` ✅
+- `squad-heartbeat.yml` ✅
+
+### Benefits
+- **Flexibility:** Team can manually trigger critical workflows without waiting for event conditions
+- **Testing:** Easier to test workflow behavior during development
+- **Debugging:** Can re-run workflows to verify fixes without modifying code
+- **Non-breaking:** All existing automatic triggers remain intact
+
+---
+
+## E2E Test Data Isolation Pattern (2026-07-04)
+
+**Author:** Switch (Tester)  
+**Status:** Implemented
+
+### Context
+`resolveProjectId()` in `hook-event-store.ts` uses `Array.find()` to match projects by path, returning the first match. Multiple test runs accumulate duplicate projects in `data/projects.json`, causing hooks to resolve to stale project IDs.
+
+### Decision
+E2E tests that create projects should:
+1. Use a **unique project path per test run** (e.g., `C:\\e2e-hooks-test-${Date.now()}`)
+2. **Clean up leftover test projects** in `beforeAll` before creating new ones
+3. **Delete test projects** in `afterAll`
+
+### Consequences
+- Tests are isolated regardless of previous test run state
+- No accumulation of orphaned test data in `data/projects.json`
+- Pattern established in `e2e/08-notifications-hooks.spec.ts` for future test specs to follow
+
+---
+
+## Stable IPC Message IDs for Event Tracking (2025-07-21)
+
+**Author:** Trinity (Frontend Dev)  
+**Status:** Implemented
+
+### Context
+The `useIpcEvents` hook caps its message array at 200 items by slicing to 100. All consumers (SessionView, ActivityTimeline, useNotifications) tracked their read position by array index or length. After a cap event, indices became invalid and consumers silently stopped receiving updates.
+
+### Decision
+Added a monotonically incrementing `id: number` field to every `IpcMessage`. The counter (`let nextMsgId = 0`) lives at module scope so it persists across re-renders and remounts. All consumers now track `lastProcessedIdRef` (initialized to -1) and filter new messages with `m.id > lastProcessedIdRef.current`.
+
+### Consequences
+- **Positive:** Array capping is now safe — IDs are position-independent. Batch message processing works correctly. No more silent update loss during active sessions.
+- **Positive:** Pattern is consistent across all 3 consumers — easy to apply to future IPC subscribers.
+- **Trade-off:** `.filter()` on every render is O(n) over the message array (max 200 items) — negligible cost.
+- **Convention:** Any new consumer of `useIpcEvents().messages` should use ID-based tracking, not index-based.
+
+### Files Changed
+- `src/hooks/useIpcEvents.ts` — Added `id` field + module-level counter
+- `src/pages/SessionView.tsx` — `lastIpcMsgIndexRef` → `lastProcessedIdRef`
+- `src/components/ActivityTimeline.tsx` — Single-message check → batch ID-filtered processing
+- `src/hooks/useNotifications.tsx` — `processedCount` → `lastProcessedIdRef`
