@@ -85,3 +85,26 @@
 - Distribution status: GitHub Releases ✅, Chocolatey ✅, winget ✅, apt ✅, npm ⏳ (pending token)
 
 **Status:** Completed. v0.2.2 released with NSIS naming fix active across all package managers.
+
+### Session: Patch Release v0.2.3
+- **Task**: Release v0.2.3 to include Chocolatey nuspec schema fix in the tagged commit
+- **Commit**: ce98d15 (chore: bump version to 0.2.3)
+- **Tag**: v0.2.3
+- **Release**: v0.2.3 — https://github.com/jmanuelcorral/squadcenter/releases/tag/v0.2.3
+
+**Changes:**
+- Updated `package.json` version field to 0.2.3
+- Updated `package-lock.json` version fields (2 entries)
+- Includes the nuspec schema fix (40c56a8) and NSIS artifact naming fix (ee14ff9)
+
+**Distribution results:**
+- GitHub Releases ✅ (all 3 platforms built successfully)
+- npm ✅ (squad-center@0.2.3 published)
+- Chocolatey ✅ (nuspec schema fix resolved the NuGet incompatibility)
+- apt ✅ (Debian repo updated)
+- winget ❌ (PAT lifetime >90 days — user must recreate PAT with ≤90 day expiry)
+
+**Learnings:**
+- Re-running failed CI jobs uses the original commit's code. If a fix is committed after the tag, a new release is required.
+- npm token must be "Automation" type (not Granular) for publishing new packages.
+- winget requires GitHub PAT with ≤90 day lifetime due to Microsoft Open Source org policy.
