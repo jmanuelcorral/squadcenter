@@ -44,6 +44,13 @@ Converting squadCenter from client/server web app to standalone Electron desktop
 
 Migrating React renderer from `client/src/` to `src/` at project root. Replaced all `fetch()` calls (23 channels) with `window.electronAPI.invoke()`. Created `useIpcEvents` hook to replace WebSocket, preserving interface (`messages`, `connected`, `send`) to minimize component changes. Switched `BrowserRouter` to `HashRouter` for file:// protocol compatibility. Added `src/types/electron.d.ts` for TypeScript declarations. Root `index.html` points to `/src/main.tsx`. All downstream components updated. `client/` directory preserved for reference — cleanup is separate task.
 
+### 7. GitHub Actions Secrets Configuration
+**Author:** Tank (DevOps)  
+**Date:** 2026-04-07  
+**Status:** Implemented (except WINGET_TOKEN)
+
+Configured secrets for the release pipeline: GPG_PRIVATE_KEY (apt signing), GPG_PASSPHRASE, NPM_TOKEN, CHOCO_API_KEY. All automated secrets verified. WINGET_TOKEN requires manual PAT creation by user — cannot be automated. Release pipeline is ready for v0.2.1+ releases once WINGET_TOKEN is set.
+
 ## Governance
 
 - All meaningful changes require team consensus
