@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url';
 import { registerAllHandlers } from './ipc/index.js';
 import { setBrowserWindow } from './services/event-bridge.js';
 import { setDataDir, saveNotifications } from './services/storage.js';
-import { startHooksServer, stopHooksServer } from './hooks-server.js';
+import { startHooksServer, stopHooksServer, getHooksServerUrl } from './hooks-server.js';
 import { clearAllEvents } from './services/hook-event-store.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -92,8 +92,8 @@ app.whenReady().then(async () => {
   // Register all IPC handlers
   registerAllHandlers(ipcMain);
 
-  // Start the hooks HTTP server for Copilot CLI callbacks
-  startHooksServer(3001);
+  // Start the hooks HTTP server for Copilot CLI callbacks (await so port is known)
+  await startHooksServer(3001);
 
   // Create the main window
   createWindow();

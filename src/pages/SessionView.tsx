@@ -35,7 +35,7 @@ export default function SessionView() {
   const [hooksStatus, setHooksStatus] = useState<HooksValidation | null>(null);
   const [copilotConfig, setCopilotConfig] = useState<CopilotConfig | null>(null);
   const { messages: ipcMessages } = useIpcEvents();
-  const lastIpcMsgIndexRef = useRef(0);
+  const lastProcessedIdRef = useRef(-1);
 
   // Load session data on mount
   useEffect(() => {
@@ -70,9 +70,10 @@ export default function SessionView() {
   // Subscribe to IPC events for this session
   useEffect(() => {
     if (!id || ipcMessages.length === 0) return;
-    // Only process new messages since last render
-    const newMessages = ipcMessages.slice(lastIpcMsgIndexRef.current);
-    lastIpcMsgIndexRef.current = ipcMessages.length;
+
+    const newMessages = ipcMessages.filter(m => m.id > lastProcessedIdRef.current);
+    if (newMessages.length === 0) return;
+    lastProcessedIdRef.current = newMessages[newMessages.length - 1].id;
 
     for (const msg of newMessages) {
       if (msg.type === 'session:output') {

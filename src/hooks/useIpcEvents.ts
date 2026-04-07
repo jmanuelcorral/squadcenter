@@ -1,9 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
 interface IpcMessage {
+  id: number;
   type: string;
   payload: unknown;
 }
+
+let nextMsgId = 0;
 
 export function useIpcEvents() {
   const [messages, setMessages] = useState<IpcMessage[]>([]);
@@ -23,8 +26,7 @@ export function useIpcEvents() {
       const cleanup = window.electronAPI.on(channel, (payload: unknown) => {
         const type = channel.replace('event:', '');
         setMessages((prev) => {
-          // Cap messages to prevent unbounded growth
-          const next = [...prev, { type, payload }];
+          const next = [...prev, { id: nextMsgId++, type, payload }];
           return next.length > 200 ? next.slice(-100) : next;
         });
       });

@@ -18,7 +18,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const { messages } = useIpcEvents();
-  const processedCount = useRef(0);
+  const lastProcessedIdRef = useRef(-1);
 
   useEffect(() => {
     fetchNotifications()
@@ -29,14 +29,11 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   // Process ALL new notification messages, not just the last one
   useEffect(() => {
-    // Handle array cap/shrink: reset if array is smaller than our counter
-    if (messages.length < processedCount.current) {
-      processedCount.current = 0;
-    }
-    if (messages.length <= processedCount.current) return;
+    if (messages.length === 0) return;
 
-    const newMessages = messages.slice(processedCount.current);
-    processedCount.current = messages.length;
+    const newMessages = messages.filter(m => m.id > lastProcessedIdRef.current);
+    if (newMessages.length === 0) return;
+    lastProcessedIdRef.current = newMessages[newMessages.length - 1].id;
 
     const newNotifications = newMessages
       .filter(m => m.type === 'notification')

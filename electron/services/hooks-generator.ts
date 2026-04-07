@@ -1,6 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import type { HookEventType } from '../../shared/types.js';
+import { getHooksServerUrl } from '../hooks-server.js';
 
 interface HookEntry {
   type: 'command';
@@ -49,7 +50,7 @@ try {
 
 export async function generateHooksConfig(
   projectPath: string,
-  serverUrl = 'http://localhost:3001',
+  serverUrl = getHooksServerUrl(),
 ): Promise<string> {
   const hooksDir = path.join(projectPath, '.github', 'hooks');
   await fs.mkdir(hooksDir, { recursive: true });

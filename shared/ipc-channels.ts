@@ -43,8 +43,12 @@ export const IPC_CHANNELS = {
 export const IPC_EVENTS = {
   PROJECT_UPDATED: 'event:project-updated',
   NOTIFICATION: 'event:notification',
+  AGENT_STATUS_CHANGED: 'event:agent-status-changed',
   SESSION_OUTPUT: 'event:session:output',
   SESSION_STATUS: 'event:session:status',
+  SESSION_PTY_DATA: 'event:session:ptyData',
+  SESSION_STATS: 'event:session:stats',
+  SESSION_AGENT_ACTIVITY: 'event:session:agentActivity',
   HOOK_EVENT: 'event:hook:event',
 } as const;
 

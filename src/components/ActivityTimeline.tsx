@@ -138,6 +138,7 @@ export default function ActivityTimeline({ projectId, compact = false }: Activit
   const bottomRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const { messages: ipcMessages } = useIpcEvents();
+  const lastProcessedIdRef = useRef(-1);
 
   // Initial fetch
   useEffect(() => {
@@ -150,12 +151,19 @@ export default function ActivityTimeline({ projectId, compact = false }: Activit
   // Subscribe to real-time hook events via IPC
   useEffect(() => {
     if (ipcMessages.length === 0) return;
-    const latest = ipcMessages[ipcMessages.length - 1];
-    if (latest.type === 'hook:event') {
-      const payload = latest.payload as { projectPath?: string; event?: HookEvent };
-      if (payload.event && payload.event.projectId === projectId) {
-        setEvents((prev) => [...prev, payload.event!]);
-      }
+
+    const newMessages = ipcMessages.filter(m => m.id > lastProcessedIdRef.current);
+    if (newMessages.length === 0) return;
+    lastProcessedIdRef.current = newMessages[newMessages.length - 1].id;
+
+    const hookEvents = newMessages
+      .filter(m => m.type === 'hook:event')
+      .map(m => m.payload as { projectPath?: string; event?: HookEvent })
+      .filter(p => p.event && p.event.projectId === projectId)
+      .map(p => p.event!);
+
+    if (hookEvents.length > 0) {
+      setEvents((prev) => [...prev, ...hookEvents]);
     }
   }, [ipcMessages, projectId]);
 

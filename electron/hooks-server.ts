@@ -13,8 +13,18 @@ const VALID_EVENT_TYPES: HookEventType[] = [
 ];
 
 let server: http.Server | null = null;
+let actualPort: number | null = null;
 
-export function startHooksServer(port = 3001): http.Server {
+export function getHooksServerPort(): number {
+  return actualPort ?? 3001;
+}
+
+export function getHooksServerUrl(): string {
+  return `http://localhost:${getHooksServerPort()}`;
+}
+
+export function startHooksServer(port = 3001): Promise<http.Server> {
+  return new Promise((resolve) => {
   server = http.createServer(async (req, res) => {
     // Only handle POST /api/hooks/event
     if (req.method === 'POST' && req.url === '/api/hooks/event') {
@@ -69,7 +79,9 @@ export function startHooksServer(port = 3001): http.Server {
   });
 
   server.listen(port, () => {
+    actualPort = port;
     console.log(`[squadCenter] Hooks HTTP server listening on port ${port}`);
+    resolve(server!);
   });
 
   server.on('error', (err: NodeJS.ErrnoException) => {
@@ -77,20 +89,22 @@ export function startHooksServer(port = 3001): http.Server {
       console.warn(`[squadCenter] Port ${port} in use, trying port 0 (random)`);
       server!.listen(0, () => {
         const addr = server!.address();
-        const actualPort = typeof addr === 'object' && addr ? addr.port : '?';
+        actualPort = typeof addr === 'object' && addr ? addr.port : 3001;
         console.log(`[squadCenter] Hooks HTTP server listening on port ${actualPort}`);
+        resolve(server!);
       });
     } else {
       console.error('[squadCenter] Hooks server error:', err);
+      resolve(server!);
     }
   });
-
-  return server;
+  });
 }
 
 export function stopHooksServer(): void {
   if (server) {
     server.close();
     server = null;
+    actualPort = null;
   }
 }
