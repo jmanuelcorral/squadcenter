@@ -73,7 +73,8 @@
       "category": "public.app-category.developer-tools"
     },
     "publish": {
-      "provider": "github"
+      "provider": "github",
+      "releaseType": "release"
     }
   },
   "dependencies": {
