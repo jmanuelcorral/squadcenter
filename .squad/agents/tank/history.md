@@ -15,6 +15,7 @@
 - **GPG for apt:** Key generation is batch-friendly and non-interactive with `%no-protection`. Private key export is straightforward; passphrase field left empty simplifies CI automation.
 - **WINGET_TOKEN requires manual setup:** Cannot be generated programmatically; user must create GitHub PAT at settings/tokens with `public_repo` scope for winget-pkgs PRs.
 - **Secret verification:** All 5 secrets now configured (NPM_TOKEN, CHOCO_API_KEY, GPG_PRIVATE_KEY, GPG_PASSPHRASE). Only WINGET_TOKEN remains manual.
+- **NSIS installer naming mismatch:** electron-builder defaults to spaces in NSIS filenames (e.g., `Squad Center Setup 0.2.1.exe`), but CI globs expect hyphens. Explicit `artifactName` in package.json ensures local file matches the glob pattern; GitHub then sanitizes spaces to hyphens in the release.
 
 ## Sessions
 
@@ -54,3 +55,17 @@
 - apt repo hosted on GitHub Pages via peaceiris/actions-gh-pages
 - Secrets referenced via env vars in workflow (not interpolated in commands)
 - Required secrets: NPM_TOKEN, CHOCO_API_KEY, WINGET_TOKEN, GPG_PRIVATE_KEY, GPG_PASSPHRASE
+
+### Session: Patch Release v0.2.1
+- **Task**: Bump version from 0.2.0 to 0.2.1, commit, tag, push, and create GitHub release
+- **Commit**: 3ba9857 (chore: bump version to 0.2.1)
+- **Tag**: v0.2.1
+- **Release**: v0.2.1 — https://github.com/jmanuelcorral/squadcenter/releases/tag/v0.2.1
+
+**Changes:**
+- Updated `package.json` version field
+- Updated `package-lock.json` version fields (2 entries)
+- Release workflow triggered automatically on tag push
+- Release notes auto-generated from commits since v0.2.0
+
+**Status:** Completed. All 5 distribution channels (GitHub Releases, npm, Chocolatey, winget, apt) are active and will build/publish automatically.

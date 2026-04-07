@@ -331,3 +331,46 @@ Added a monotonically incrementing `id: number` field to every `IpcMessage`. The
 - `src/pages/SessionView.tsx` — `lastIpcMsgIndexRef` → `lastProcessedIdRef`
 - `src/components/ActivityTimeline.tsx` — Single-message check → batch ID-filtered processing
 - `src/hooks/useNotifications.tsx` — `processedCount` → `lastProcessedIdRef`
+
+---
+
+## Fix: NSIS Installer Naming Mismatch (2026-04-07)
+
+**Author:** Tank (DevOps)  
+**Status:** Implemented  
+**Commit:** ee14ff9
+
+### Problem
+Windows release workflow was failing in `publish-chocolatey` and `publish-winget` jobs because they couldn't find the NSIS installer artifact.
+
+**Root cause:** electron-builder defaults to spaces in NSIS filenames:
+- Actual file: `Squad Center Setup 0.2.1.exe` (spaces)
+- Workflow glob: `release/Squad-Center-Setup-*.exe` (hyphens)
+- Result: No files matched → upload-artifact found nothing
+
+Note: GitHub Release display shows hyphens because GitHub auto-sanitizes spaces, but the LOCAL file still uses spaces.
+
+### Solution
+Added explicit `artifactName` to the NSIS config in `package.json`:
+
+```json
+"nsis": {
+  "oneClick": false,
+  "perMachine": false,
+  "allowToChangeInstallationDirectory": true,
+  "artifactName": "Squad-Center-Setup-${version}.${ext}"
+}
+```
+
+This ensures:
+- Local file: `Squad Center Setup 0.2.1.exe` → electron-builder names it `Squad-Center-Setup-0.2.1.exe`
+- Workflow glob: `release/Squad-Center-Setup-*.exe` ✅ matches
+- GitHub release: Consistent hyphenated filename
+
+### Impact
+- ✅ Chocolatey and winget publish jobs can now find the artifact
+- ✅ No breaking changes to any other build targets
+- ✅ Consistent naming across local, CI, and GitHub Release
+
+### Files Changed
+- `package.json` — Added `artifactName` to NSIS config (1 line)
