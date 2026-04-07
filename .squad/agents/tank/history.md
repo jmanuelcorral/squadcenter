@@ -16,6 +16,7 @@
 - **WINGET_TOKEN requires manual setup:** Cannot be generated programmatically; user must create GitHub PAT at settings/tokens with `public_repo` scope for winget-pkgs PRs.
 - **Secret verification:** All 5 secrets now configured (NPM_TOKEN, CHOCO_API_KEY, GPG_PRIVATE_KEY, GPG_PASSPHRASE). Only WINGET_TOKEN remains manual.
 - **NSIS installer naming mismatch:** electron-builder defaults to spaces in NSIS filenames (e.g., `Squad Center Setup 0.2.1.exe`), but CI globs expect hyphens. Explicit `artifactName` in package.json ensures local file matches the glob pattern; GitHub then sanitizes spaces to hyphens in the release.
+- **Chocolatey nuspec schema compatibility:** The `schemas.chocolatey.org` namespace is incompatible with NuGet v2.7.0 on GitHub Actions runners. Use the official Microsoft schema (`schemas.microsoft.com/packaging/2015/06/nuspec.xsd`) for compatibility across all Chocolatey versions. NuGet's validation requires the Microsoft namespace for proper schema resolution.
 
 ## Sessions
 
@@ -69,3 +70,18 @@
 - Release notes auto-generated from commits since v0.2.0
 
 **Status:** Completed. All 5 distribution channels (GitHub Releases, npm, Chocolatey, winget, apt) are active and will build/publish automatically.
+
+### Session: Patch Release v0.2.2
+- **Task**: Bump version from 0.2.1 to 0.2.2, commit, tag, push, and create GitHub release
+- **Commit**: 3c9f0ce (chore: bump version to 0.2.2)
+- **Tag**: v0.2.2
+- **Release**: v0.2.2 — https://github.com/jmanuelcorral/squadcenter/releases/tag/v0.2.2
+
+**Changes:**
+- Updated `package.json` version field to 0.2.2
+- Updated `package-lock.json` version fields (2 entries)
+- Release notes highlight NSIS artifactName fix (ee14ff9) for Chocolatey and winget
+- Release workflow triggered automatically on tag push
+- Distribution status: GitHub Releases ✅, Chocolatey ✅, winget ✅, apt ✅, npm ⏳ (pending token)
+
+**Status:** Completed. v0.2.2 released with NSIS naming fix active across all package managers.
