@@ -205,3 +205,15 @@
 - **Actions:** Deleted empty release, re-created v0.1.1 via `gh release create` with full notes, pushed tag to trigger Release workflow. electron-builder ran with the fixed `releaseType: "release"` config and correctly uploaded all binaries.
 - **Verification:** All 9 assets now present in GitHub releases — release process is stable and automated for both manual and tag-push triggers.
 - **Team impact:** No further action required — release pipeline is robust and ready for v0.1.2 and beyond.
+
+### 2026-04-08 — Added sessions:resume and sessions:forceResume IPC handlers
+- Added `resumeCopilotSession()` to `electron/services/session-manager.ts` — spawns `copilot --resume` with the same PTY/hooks/log-watcher setup as `startCopilotSession()` but returns `{ conflict: true, activeSessionId }` instead of silently returning the existing session
+- Exported `findActiveSessionForProject()` so IPC handlers can check for conflicts before force-resuming
+- Added `sessions:resume` IPC handler — calls `resumeCopilotSession()` and lets the frontend handle conflict dialog
+- Added `sessions:forceResume` IPC handler — stops active session first (500ms cleanup delay), then resumes
+- Added `SESSIONS_RESUME` and `SESSIONS_FORCE_RESUME` to `shared/ipc-channels.ts`
+- Resume args: `DEFAULT_COPILOT_ARGS + ['--resume']` — Copilot CLI handles session ID internally based on project path
+- Build compiles clean with zero errors
+- Wired onResumeSession and onForceResume callback props to SessionHistoryPanel so frontend can invoke the new IPC handlers
+- esumeLoading guard disables all resume buttons while any resume is in-flight (prevents race conditions)
+

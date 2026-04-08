@@ -250,3 +250,16 @@ Fixed critical message-tracking bug across 4 files. The `useIpcEvents` array-cap
 - **Files changed:** `src/hooks/useIpcEvents.ts`, `src/pages/SessionView.tsx`, `src/components/ActivityTimeline.tsx`, `src/hooks/useNotifications.tsx`
 - **ActivityTimeline bonus:** Fixed single-message check (only looked at last array element) → now batch-processes all new hook events via filter.
 - **Key insight:** Module-level counters survive React re-renders and component remounts — correct for global IPC state. The `id` is independent of array position, so capping is safe.
+
+### Resume Session Button — SessionHistoryPanel
+
+Added per-session "Resume" button to the session history panel, allowing users to resume past Copilot CLI sessions directly from the history list.
+
+- **Files changed:** `src/components/SessionHistoryPanel.tsx`, `src/lib/api.ts`, `src/pages/ProjectView.tsx`
+- **API layer:** Added `resumeCopilotSession()` and `forceResumeCopilotSession()` wrappers invoking `sessions:resume` / `sessions:forceResume` IPC channels
+- **SessionCard:** Added Play icon button (emerald, lucide-react) in header row between stats badges and chevron. Uses `e.stopPropagation()` to avoid triggering expand toggle. Shows Loader2 spinner while resuming. Disabled across all cards while any resume is in progress.
+- **Conflict dialog:** Matches existing delete confirmation modal style (fixed overlay, backdrop-blur, rounded-2xl slate-800 card). Uses AlertTriangle amber icon. "Close & Resume" button calls `forceResumeCopilotSession`.
+- **Props expansion:** `SessionHistoryPanelProps` now accepts optional `projectId`, `copilotConfig`, `onSessionStarted` — all optional so existing usages don't break.
+- **ProjectView wiring:** Passes `projectId={id!}`, `copilotConfig={project.copilotConfig}`, `onSessionStarted` callback that navigates to `/sessions/${sessionId}`.- **Build & test:** Vite build passes clean (~88 KB gzipped), no TypeScript errors, no regressions to existing features, session cards remain responsive
+- **Feature complete:** Users can now resume historical sessions without terminal navigation. Backend cleanly separates conflict detection from action, frontend owns UX decisions.
+

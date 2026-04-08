@@ -51,6 +51,32 @@ Migrating React renderer from `client/src/` to `src/` at project root. Replaced 
 
 Configured secrets for the release pipeline: GPG_PRIVATE_KEY (apt signing), GPG_PASSPHRASE, NPM_TOKEN, CHOCO_API_KEY. All automated secrets verified. WINGET_TOKEN requires manual PAT creation by user — cannot be automated. Release pipeline is ready for v0.2.1+ releases once WINGET_TOKEN is set.
 
+### 8. Session Resume Uses Conflict Return Pattern
+**Author:** Morpheus  
+**Date:** 2026-04-08  
+**Status:** Implemented
+
+When adding `sessions:resume`, we needed to decide how to handle the case where an active session already exists for the project. The existing `startCopilotSession()` silently returns the active session — no conflict signal to the frontend.
+
+`resumeCopilotSession()` returns `{ conflict: true, activeSessionId }` instead of silently reusing the existing session. A separate `sessions:forceResume` handler stops the active session first, then resumes. This gives the frontend full control over the UX (e.g., showing a confirmation dialog).
+
+Resume is an intentional user action on a specific historical session. Silently reusing an unrelated active session would be confusing. The two-handler pattern (`resume` + `forceResume`) keeps the backend stateless about UI decisions while providing the data the frontend needs.
+
+Impact: Frontend must handle the `{ conflict }` return from `sessions:resume`. `findActiveSessionForProject` is now exported for use in IPC handlers. Resume spawns `copilot --resume` (no session ID arg) — Copilot CLI resolves the session internally by project path.
+
+### 9. Resume Session UI Pattern
+**Author:** Trinity (Frontend Dev)  
+**Date:** 2026-04-08  
+**Status:** Implemented
+
+Users want to resume past Copilot CLI sessions from the session history panel without navigating away or manually running `copilot --resume`.
+
+Resume button lives inside each `SessionCard` header row (Play icon, emerald color) — non-intrusive, consistent placement. Conflict resolution uses a modal dialog matching the existing delete confirmation pattern (fixed overlay, backdrop-blur, rounded-2xl slate-800). New props on `SessionHistoryPanel` are all optional to maintain backward compatibility.
+
+Two-step resume flow: `sessions:resume` checks for conflicts, `sessions:forceResume` stops active + resumes — keeps frontend stateless about session management. Loading state disables ALL resume buttons while any resume is in progress (prevents race conditions).
+
+Frontend expects two IPC channels: `sessions:resume` → returns `Session | { conflict: true, activeSessionId: string }` and `sessions:forceResume` → returns `Session` (stops active session first, then resumes).
+
 ## Governance
 
 - All meaningful changes require team consensus
