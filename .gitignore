@@ -29,3 +29,6 @@ release/
 
 # Downloaded app binaries (npm install cache)
 bin/.cache/
+
+# User data (created at runtime)
+data/

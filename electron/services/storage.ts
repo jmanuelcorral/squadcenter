@@ -1,4 +1,5 @@
 import fs from 'fs/promises';
+import { existsSync, mkdirSync } from 'fs';
 import path from 'path';
 import type { Project, Notification } from '../../shared/types.js';
 
@@ -6,6 +7,9 @@ let DATA_DIR = path.join(process.cwd(), 'data');
 
 export function setDataDir(dir: string): void {
   DATA_DIR = dir;
+  if (!existsSync(DATA_DIR)) {
+    mkdirSync(DATA_DIR, { recursive: true });
+  }
 }
 
 export function getDataDir(): string {
