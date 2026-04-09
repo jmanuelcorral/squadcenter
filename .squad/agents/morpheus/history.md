@@ -217,3 +217,11 @@
 - Wired onResumeSession and onForceResume callback props to SessionHistoryPanel so frontend can invoke the new IPC handlers
 - esumeLoading guard disables all resume buttons while any resume is in-flight (prevents race conditions)
 
+
+### 2026-04-09 — Fixed user data leaking between installations
+- **Problem:** `data/` directory (`projects.json`, `notifications.json`) was committed to git. New clones/installs got the original developer's project data.
+- **Fix 1:** Added `data/` to `.gitignore`
+- **Fix 2:** Ran `git rm --cached -r data/` to remove files from tracking while keeping them on disk
+- **Fix 3:** Updated `setDataDir()` in `electron/services/storage.ts` to create the data directory on first call using sync `mkdirSync` + `existsSync` (imported from `fs`, separate from async `fs/promises`)
+- Storage module already had robust `ensureDataDir()` in read/write paths — `setDataDir()` was the only gap
+- Build verified clean after changes

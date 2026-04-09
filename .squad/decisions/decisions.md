@@ -374,3 +374,24 @@ This ensures:
 
 ### Files Changed
 - `package.json` — Added `artifactName` to NSIS config (1 line)
+
+---
+
+## User Data Isolation from Repository (2026-04-09)
+
+**Author:** Morpheus (Backend Dev)  
+**Status:** Implemented
+
+### Context
+The `data/` directory containing `projects.json` and `notifications.json` was committed to the git repository. Any new clone, npm install, or Electron installer would ship with the original developer's project data — a privacy leak and a bad first-run experience.
+
+### Decision
+- `data/` is now gitignored and untracked
+- `setDataDir()` in `electron/services/storage.ts` eagerly creates the data directory using sync `mkdirSync` on first call (app startup), so the directory exists before any read/write operation
+- The existing `ensureDataDir()` async calls in `readJsonFile`/`writeJsonFile` remain as a safety net
+- Fresh installs start with an empty `data/` directory; `loadProjects()` and `loadNotifications()` return `[]` when files don't exist (already handled by `readJsonFile` fallback pattern)
+
+### Impact
+- No user data ships with the app
+- Fresh clones work out of the box (data dir created on first run)
+- Existing developers keep their local data (files removed from git only, not disk)
