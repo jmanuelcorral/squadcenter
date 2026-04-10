@@ -32,7 +32,19 @@ Think of it as a mission control dashboard: you configure projects, spin up Copi
 
 ### Dashboard
 ![Dashboard](docs/screenshots/dashboard.png)
-*Project overview with Squad agent team avatars, session launcher, and real-time monitoring status.*
+*Project overview with quick-access cards, session count, and archive management.*
+
+### Project Details
+![Project Details](docs/screenshots/projectdetails.png)
+*Three-column project view: Squad team roster, session launcher with configuration, and session history with resume capability.*
+
+### Active Session
+![Active Session](docs/screenshots/projectsession.png)
+*Integrated terminal with live Copilot CLI output, activity timeline, token usage stats, and real-time hook events.*
+
+### Full Screen Terminal
+![Full Screen](docs/screenshots/full-screen.png)
+*Maximized terminal view for focused interaction with the Copilot CLI session.*
 
 ## 🛠️ Tech Stack
 
