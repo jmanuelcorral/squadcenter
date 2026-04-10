@@ -42,10 +42,6 @@ Think of it as a mission control dashboard: you configure projects, spin up Copi
 ![Active Session](docs/screenshots/projectsession.png)
 *Integrated terminal with live Copilot CLI output, activity timeline, token usage stats, and real-time hook events.*
 
-### Full Screen Terminal
-![Full Screen](docs/screenshots/full-screen.png)
-*Maximized terminal view for focused interaction with the Copilot CLI session.*
-
 ## 🛠️ Tech Stack
 
 | Layer | Technology |
