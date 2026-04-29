@@ -108,3 +108,35 @@
 - Re-running failed CI jobs uses the original commit's code. If a fix is committed after the tag, a new release is required.
 - npm token must be "Automation" type (not Granular) for publishing new packages.
 - winget requires GitHub PAT with ≤90 day lifetime due to Microsoft Open Source org policy.
+
+### Session: Release v0.3.0 — Resume Sessions + Data Isolation
+- **Task**: Release v0.3.0 with CHANGELOG.md, covering resume session feature and user data isolation fix
+- **Commit**: f9b3428 (chore: release v0.3.0 — resume sessions + data isolation)
+- **Tag**: v0.3.0
+- **Release**: v0.3.0 — https://github.com/jmanuelcorral/squadcenter/releases/tag/v0.3.0
+
+**Changes delivered:**
+- Created CHANGELOG.md documenting all releases from v0.1.0 to v0.3.0
+- Updated `package.json` version to 0.3.0
+- Updated `package-lock.json` version entries (2 entries)
+
+**Features in this release:**
+- Resume Session: Play button on session cards runs `copilot --resume`
+- Active session conflict detection with confirmation dialog
+- "Close & Resume" option to stop current session and resume selected one
+
+**Fixes in this release:**
+- User data isolation: `projects.json`, `notifications.json` removed from repo
+- Data directory now auto-created on first run
+- Dev mode uses `cwd/data`, packaged builds use `app.getPath('userData')/data`
+
+**Build verification:**
+- Vite renderer build: ✅ (675 kB minified, 184 kB gzip)
+- Electron main: ✅ (56 kB minified)
+- Preload: ✅ (0.35 kB minified)
+
+**Distribution status:**
+- GitHub Releases ✅ (all 3 platforms will build on tag push)
+- Release notes published with feature/fix summaries and install instructions
+
+**Status:** Completed. v0.3.0 released with new features and fixes. Build verified successfully.

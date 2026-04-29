@@ -225,3 +225,9 @@
 - **Fix 3:** Updated `setDataDir()` in `electron/services/storage.ts` to create the data directory on first call using sync `mkdirSync` + `existsSync` (imported from `fs`, separate from async `fs/promises`)
 - Storage module already had robust `ensureDataDir()` in read/write paths — `setDataDir()` was the only gap
 - Build verified clean after changes
+
+### 2026-04-29 — Fixed Windows Copilot PTY launch
+- **Problem:** Opening a Copilot session failed on Windows with node-pty `Cannot create process, error code: 2`.
+- **Root cause:** `electron/services/session-manager.ts` spawned `pty.spawn('copilot', ...)` directly. On this machine Copilot CLI is a Volta `copilot.cmd` shim, and Windows ConPTY/CreateProcess cannot launch that shim by bare command name.
+- **Fix:** Added `spawnCopilotPty()` and route Windows Copilot launches through `%ComSpec%`/`cmd.exe /d /c copilot ...`; non-Windows still spawns `copilot` directly. Both new sessions and resume sessions use the helper.
+- **Validation:** Direct node-pty spawn of `copilot --version` reproduced error code 2; the `cmd.exe /d /c copilot --version` wrapper exited 0. `npm run build` via the Volta npm CLI completed successfully.

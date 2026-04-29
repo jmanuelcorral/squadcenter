@@ -292,7 +292,12 @@ export default function ProjectView() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Session History — left */}
         <div className={`lg:col-span-2 ${activeTab !== 'history' ? 'hidden lg:block' : ''}`}>
-          <SessionHistoryPanel projectPath={project.path} />
+          <SessionHistoryPanel
+            projectPath={project.path}
+            projectId={id!}
+            copilotConfig={project.copilotConfig}
+            onSessionStarted={(sessionId) => navigate(`/sessions/${sessionId}`)}
+          />
         </div>
 
         {/* Team Panel — right sidebar (collapsible, static roster) */}

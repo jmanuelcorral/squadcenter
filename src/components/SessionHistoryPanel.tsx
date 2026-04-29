@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { History, Zap, MessageCircle, Wrench, Users, ChevronRight, ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
-import { getSessionHistory } from '../lib/api';
-import type { SessionHistoryEntry } from '../lib/api';
+import { History, Zap, MessageCircle, Wrench, Users, ChevronRight, ArrowDownToLine, ArrowUpFromLine, Play, Loader2, AlertTriangle } from 'lucide-react';
+import { getSessionHistory, resumeCopilotSession, forceResumeCopilotSession } from '../lib/api';
+import type { SessionHistoryEntry, CopilotConfig } from '../lib/api';
 
 // Sigma icon inline (lucide-react doesn't export it directly in all versions)
 function SigmaIcon({ className }: { className?: string }) {
@@ -14,6 +14,9 @@ function SigmaIcon({ className }: { className?: string }) {
 
 interface SessionHistoryPanelProps {
   projectPath: string;
+  projectId?: string;
+  copilotConfig?: CopilotConfig;
+  onSessionStarted?: (sessionId: string) => void;
 }
 
 function timeAgo(dateStr: string): string {
@@ -33,9 +36,15 @@ function formatNumber(n: number): string {
   return n.toLocaleString();
 }
 
-function SessionCard({ entry, index }: { entry: SessionHistoryEntry; index: number }) {
+function SessionCard({ entry, index, onResume, resumingId }: {
+  entry: SessionHistoryEntry;
+  index: number;
+  onResume?: (entryId: string) => void;
+  resumingId?: string | null;
+}) {
   const [expanded, setExpanded] = useState(false);
   const { stats, agentSummary, members } = entry;
+  const isResuming = resumingId === entry.id;
 
   return (
     <div className="rounded-lg bg-slate-800/60 ring-1 ring-white/5 overflow-hidden transition-all hover:ring-white/10">
@@ -64,6 +73,23 @@ function SessionCard({ entry, index }: { entry: SessionHistoryEntry; index: numb
               <Users className="w-3 h-3" />
               {agentSummary.total}
             </span>
+          )}
+          {onResume && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onResume(entry.id);
+              }}
+              disabled={!!resumingId}
+              className="p-1 rounded-md text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Resume session"
+            >
+              {isResuming ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Play className="w-3.5 h-3.5" />
+              )}
+            </button>
           )}
           <ChevronRight className={`w-3 h-3 text-slate-500 transition-transform duration-200 ${expanded ? 'rotate-90' : ''}`} />
         </div>
@@ -146,9 +172,11 @@ function SessionCard({ entry, index }: { entry: SessionHistoryEntry; index: numb
   );
 }
 
-export default function SessionHistoryPanel({ projectPath }: SessionHistoryPanelProps) {
+export default function SessionHistoryPanel({ projectPath, projectId, copilotConfig, onSessionStarted }: SessionHistoryPanelProps) {
   const [history, setHistory] = useState<SessionHistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [resumingId, setResumingId] = useState<string | null>(null);
+  const [conflictDialog, setConflictDialog] = useState<{ entryId: string; activeSessionId: string } | null>(null);
 
   useEffect(() => {
     getSessionHistory(projectPath)
@@ -156,6 +184,37 @@ export default function SessionHistoryPanel({ projectPath }: SessionHistoryPanel
       .catch(() => setHistory([]))
       .finally(() => setLoading(false));
   }, [projectPath]);
+
+  async function handleResume(entryId: string) {
+    if (!projectId) return;
+    setResumingId(entryId);
+    try {
+      const result = await resumeCopilotSession(projectId, projectPath, copilotConfig);
+      if ('conflict' in result) {
+        setConflictDialog({ entryId, activeSessionId: result.activeSessionId });
+        return;
+      }
+      onSessionStarted?.(result.id);
+    } catch (err) {
+      console.error('Failed to resume session:', err);
+    } finally {
+      setResumingId(null);
+    }
+  }
+
+  async function handleForceResume() {
+    if (!projectId || !conflictDialog) return;
+    setResumingId(conflictDialog.entryId);
+    setConflictDialog(null);
+    try {
+      const session = await forceResumeCopilotSession(projectId, projectPath, copilotConfig);
+      onSessionStarted?.(session.id);
+    } catch (err) {
+      console.error('Failed to force resume session:', err);
+    } finally {
+      setResumingId(null);
+    }
+  }
 
   // Aggregate totals
   const totals = history.reduce(
@@ -221,10 +280,46 @@ export default function SessionHistoryPanel({ projectPath }: SessionHistoryPanel
           </p>
         ) : (
           history.map((entry, i) => (
-            <SessionCard key={entry.id} entry={entry} index={i} />
+            <SessionCard
+              key={entry.id}
+              entry={entry}
+              index={i}
+              onResume={projectId ? handleResume : undefined}
+              resumingId={resumingId}
+            />
           ))
         )}
       </div>
+
+      {/* Conflict confirmation dialog */}
+      {conflictDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setConflictDialog(null)} />
+          <div className="relative w-full max-w-sm rounded-2xl bg-slate-800 ring-1 ring-white/10 shadow-2xl p-6 text-center">
+            <div className="flex h-12 w-12 mx-auto items-center justify-center rounded-full bg-amber-500/10 ring-1 ring-amber-500/20 mb-4">
+              <AlertTriangle className="w-6 h-6 text-amber-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-white mb-1">Active Session Running</h3>
+            <p className="text-sm text-slate-400 mb-6">
+              There's already an active session for this project. Close it and resume the selected session?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConflictDialog(null)}
+                className="flex-1 rounded-lg px-4 py-2.5 text-sm font-medium text-slate-300 ring-1 ring-white/10 hover:bg-white/5 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleForceResume}
+                className="flex-1 rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-violet-500 transition-all"
+              >
+                Close &amp; Resume
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

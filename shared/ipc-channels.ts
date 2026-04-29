@@ -34,6 +34,9 @@ export const IPC_CHANNELS = {
   SESSIONS_SEND_INPUT: 'sessions:sendInput',
   SESSIONS_GET_OUTPUT: 'sessions:getOutput',
 
+  SESSIONS_RESUME: 'sessions:resume',
+  SESSIONS_FORCE_RESUME: 'sessions:forceResume',
+
   // Hooks
   HOOKS_GET_EVENTS: 'hooks:getEvents',
   HOOKS_GET_ACTIVITY: 'hooks:getActivity',

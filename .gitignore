@@ -32,3 +32,11 @@ bin/.cache/
 
 # User data (created at runtime)
 data/
+
+# Copilot CLI hook config generated per local project
+.copilot/hooks.json
+.copilot/hooks/
+
+# Playwright test artifacts
+playwright-report/
+test-results/

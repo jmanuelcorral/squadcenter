@@ -263,3 +263,7 @@ Added per-session "Resume" button to the session history panel, allowing users t
 - **ProjectView wiring:** Passes `projectId={id!}`, `copilotConfig={project.copilotConfig}`, `onSessionStarted` callback that navigates to `/sessions/${sessionId}`.- **Build & test:** Vite build passes clean (~88 KB gzipped), no TypeScript errors, no regressions to existing features, session cards remain responsive
 - **Feature complete:** Users can now resume historical sessions without terminal navigation. Backend cleanly separates conflict detection from action, frontend owns UX decisions.
 
+### 2026-04-29 — Resume Result Narrowing Fix
+
+Fixed the strict TypeScript narrowing issue in `SessionHistoryPanel`: `resumeCopilotSession()` returns `Session | { conflict: true; activeSessionId: string }`, so branch on `'conflict' in result` and return before reading `result.id`. Resume errors now use `console.error` instead of silent catches, matching existing frontend error logging while preserving the modal UX.
+
