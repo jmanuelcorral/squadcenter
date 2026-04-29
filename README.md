@@ -84,6 +84,10 @@ choco install squad-center
 winget install jmanuelcorral.SquadCenter
 ```
 
+> WinGet availability depends on Microsoft accepting the package submission in
+> `microsoft/winget-pkgs`. If the package is not found yet, use GitHub Releases,
+> Chocolatey, or npm while the initial submission is pending.
+
 #### 🐧 apt (Debian/Ubuntu)
 ```bash
 # Add the GPG key
