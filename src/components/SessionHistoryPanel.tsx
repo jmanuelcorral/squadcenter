@@ -190,13 +190,13 @@ export default function SessionHistoryPanel({ projectPath, projectId, copilotCon
     setResumingId(entryId);
     try {
       const result = await resumeCopilotSession(projectId, projectPath, copilotConfig);
-      if ('conflict' in result && result.conflict) {
+      if ('conflict' in result) {
         setConflictDialog({ entryId, activeSessionId: result.activeSessionId });
-      } else {
-        onSessionStarted?.(result.id);
+        return;
       }
-    } catch {
-      // resume failed silently
+      onSessionStarted?.(result.id);
+    } catch (err) {
+      console.error('Failed to resume session:', err);
     } finally {
       setResumingId(null);
     }
@@ -209,8 +209,8 @@ export default function SessionHistoryPanel({ projectPath, projectId, copilotCon
     try {
       const session = await forceResumeCopilotSession(projectId, projectPath, copilotConfig);
       onSessionStarted?.(session.id);
-    } catch {
-      // force resume failed silently
+    } catch (err) {
+      console.error('Failed to force resume session:', err);
     } finally {
       setResumingId(null);
     }

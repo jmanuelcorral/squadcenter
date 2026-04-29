@@ -44,3 +44,6 @@
 - `src/components/NotificationPanel.tsx` — Bell + notification dropdown
 - `src/hooks/useNotifications.tsx` — Notification state (merges IPC events with stored data)
 - `src/hooks/useIpcEvents.ts` — Generic IPC event listener (caps at 200 messages)
+
+### Focused Playwright Filtering on Windows (2026-04-29)
+- When invoking Playwright through `npm exec` on Windows, use a basename filter like `09-session-launch` for focused specs; backslash paths can be interpreted as regex escapes and report `No tests found`.
