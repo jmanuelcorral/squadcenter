@@ -3,3 +3,6 @@
 .squad/agents/*/history.md merge=union
 .squad/log/** merge=union
 .squad/orchestration-log/** merge=union
+
+# WinGet validation requires CRLF line endings for manifest YAML files.
+winget/**/*.yaml text eol=crlf

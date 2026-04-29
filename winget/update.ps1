@@ -38,7 +38,13 @@ foreach ($manifestPath in $manifestPaths) {
     }
   }
 
-  Set-Content -Path $manifestPath -Value $content -NoNewline -Encoding UTF8
+  $content = $content -replace "`r`n|`n|`r", "`r`n"
+  if (-not $content.EndsWith("`r`n")) {
+    $content += "`r`n"
+  }
+
+  $utf8NoBom = [System.Text.UTF8Encoding]::new($false)
+  [System.IO.File]::WriteAllText($manifestPath, $content, $utf8NoBom)
 }
 
 Write-Host "  Updated manifest."
