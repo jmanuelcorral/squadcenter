@@ -115,7 +115,7 @@ function attachProcessHandlers(managed: ManagedSession): void {
   });
 }
 
-function findActiveSessionForProject(projectId: string): Session | undefined {
+export function findActiveSessionForProject(projectId: string): Session | undefined {
   for (const [, managed] of sessions) {
     if (
       managed.session.projectId === projectId &&
@@ -175,6 +175,23 @@ export function startSession(projectId: string, projectPath: string): Session {
 }
 
 const DEFAULT_COPILOT_ARGS = ['--yolo', '--allow-all', '--agent', 'squad'];
+
+function spawnCopilotPty(args: string[], cwd: string, env: Record<string, string>): pty.IPty {
+  const options = {
+    name: 'xterm-color',
+    cols: 120,
+    rows: 30,
+    cwd,
+    env,
+  };
+
+  if (process.platform === 'win32') {
+    const commandShell = process.env.ComSpec || process.env.COMSPEC || 'cmd.exe';
+    return pty.spawn(commandShell, ['/d', '/c', 'copilot', ...args], options);
+  }
+
+  return pty.spawn('copilot', args, options);
+}
 
 function runPreCommand(cmd: string, cwd: string, env: Record<string, string>): Promise<{ stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
@@ -241,13 +258,7 @@ export async function startCopilotSession(projectId: string, projectPath: string
   let ptyProcess: pty.IPty;
   if (launchCopilot) {
     const copilotArgs = config?.args?.length ? config.args : DEFAULT_COPILOT_ARGS;
-    ptyProcess = pty.spawn('copilot', copilotArgs, {
-      name: 'xterm-color',
-      cols: 120,
-      rows: 30,
-      cwd: projectPath,
-      env: sessionEnv,
-    });
+    ptyProcess = spawnCopilotPty(copilotArgs, projectPath, sessionEnv);
   } else {
     // Shell-only mode: open a shell with the configured environment
     const defaultShell = process.platform === 'win32' ? 'powershell.exe' : (process.env.SHELL || '/bin/bash');
@@ -370,6 +381,175 @@ export async function startCopilotSession(projectId: string, projectPath: string
                 .then((existing) => {
                   existing.unshift(notification);
                   return saveNotifications(existing);
+                })
+                .catch((err) => console.error('[session-manager] Failed to persist subagent notification:', err));
+            }
+          }
+        }
+      }
+      managed.agentActivity = activity;
+      broadcast('session:agentActivity', { sessionId: id, activity });
+    },
+    sessionStartTime,
+  );
+  managed.logWatcher = logWatcher;
+
+  return session;
+}
+
+export async function resumeCopilotSession(
+  projectId: string,
+  projectPath: string,
+  config?: CopilotConfig,
+): Promise<Session | { conflict: true; activeSessionId: string }> {
+  const existing = findActiveSessionForProject(projectId);
+  if (existing) {
+    return { conflict: true, activeSessionId: existing.id };
+  }
+
+  const id = crypto.randomUUID();
+  const session: Session = {
+    id,
+    projectId,
+    projectPath,
+    type: 'copilot',
+    status: 'starting',
+    startedAt: new Date().toISOString(),
+  };
+
+  const [azureAccount, mcpServers] = await Promise.all([
+    detectAzureAccount().catch(() => null),
+    detectMcpServers(projectPath).catch(() => []),
+  ]);
+
+  let hookMonitor: HookMonitor | null = null;
+  try {
+    hookMonitor = await startHookMonitoring(projectPath, id, projectId);
+    console.log('[session-manager] Hook monitoring started for resume in', projectPath);
+  } catch (err) {
+    console.error('[session-manager] Hook monitoring failed (non-fatal):', err);
+  }
+
+  const sessionEnv = { ...(process.env as Record<string, string>) };
+  if (config?.envVars) {
+    Object.assign(sessionEnv, config.envVars);
+  }
+
+  if (config?.preCommands?.length) {
+    for (const cmd of config.preCommands) {
+      try {
+        await runPreCommand(cmd, projectPath, sessionEnv);
+      } catch (err) {
+        console.error(`[session-manager] Pre-command failed (continuing): ${cmd}`, err);
+      }
+    }
+  }
+
+  const resumeArgs = [...DEFAULT_COPILOT_ARGS, '--resume'];
+  const ptyProcess = spawnCopilotPty(resumeArgs, projectPath, sessionEnv);
+
+  const managed: ManagedSession = {
+    session,
+    process: null as unknown as ChildProcess,
+    outputBuffer: [],
+    messages: [],
+    pty: ptyProcess,
+    stats: createEmptyStats(),
+    azureAccount,
+    mcpServers,
+    hookMonitor: hookMonitor ?? undefined,
+    notifiedSubagents: new Set(),
+  };
+
+  sessions.set(id, managed);
+
+  ptyProcess.onData((data: string) => {
+    broadcast('session:ptyData', { sessionId: id, data });
+  });
+
+  ptyProcess.onExit(async () => {
+    session.status = 'stopped';
+    session.pid = undefined;
+    addMessage(managed, 'system', 'Copilot resumed session ended');
+    broadcastSessionStatus(session);
+
+    if (managed.hookMonitor) {
+      managed.hookMonitor.stop();
+      managed.hookMonitor = undefined;
+    }
+
+    try {
+      const projects = await loadProjects();
+      const project = projects.find((p) => p.id === session.projectId);
+      const projectName = project?.name ?? session.projectPath.split(/[\\/]/).pop() ?? 'Unknown';
+
+      const notification: Notification = {
+        id: crypto.randomUUID(),
+        projectId: session.projectId,
+        sessionId: session.id,
+        agentName: 'Squad',
+        message: `Resumed session completed for "${projectName}"`,
+        type: 'success',
+        read: false,
+        createdAt: new Date().toISOString(),
+      };
+
+      const existingNotifs = await loadNotifications();
+      existingNotifs.unshift(notification);
+      await saveNotifications(existingNotifs);
+      broadcast('notification', notification);
+    } catch (err) {
+      console.error('[session-manager] Failed to create completion notification:', err);
+    }
+  });
+
+  session.status = 'active';
+  session.pid = ptyProcess.pid;
+
+  addMessage(managed, 'system', 'Copilot session resumed');
+  broadcastSessionStatus(session);
+
+  const sessionStartTime = Date.now();
+  const logWatcher = watchCopilotSession(
+    projectPath,
+    (copilotStats) => {
+      managed.stats = {
+        tokensIn: copilotStats.inputTokens,
+        tokensOut: copilotStats.outputTokens,
+        tokensTotal: copilotStats.totalTokens,
+        premiumRequests: copilotStats.premiumRequests,
+        turns: copilotStats.turns,
+        toolCalls: copilotStats.toolCalls,
+        lastUpdated: copilotStats.lastUpdated,
+      };
+      broadcast('session:stats', { sessionId: id, stats: managed.stats });
+    },
+    (activity) => {
+      if (activity.members) {
+        for (const [memberName, memberAct] of Object.entries(activity.members)) {
+          for (const sub of memberAct.subagents) {
+            if (
+              (sub.status === 'completed' || sub.status === 'failed') &&
+              !managed.notifiedSubagents.has(sub.id)
+            ) {
+              managed.notifiedSubagents.add(sub.id);
+              const notification: Notification = {
+                id: crypto.randomUUID(),
+                projectId: session.projectId,
+                sessionId: session.id,
+                agentName: memberName,
+                message: sub.status === 'completed'
+                  ? `✅ ${sub.description || sub.name}`
+                  : `❌ ${sub.description || sub.name}`,
+                type: sub.status === 'completed' ? 'info' : 'warning',
+                read: false,
+                createdAt: sub.endTime ?? new Date().toISOString(),
+              };
+              broadcast('notification', notification);
+              loadNotifications()
+                .then((existingNotifs) => {
+                  existingNotifs.unshift(notification);
+                  return saveNotifications(existingNotifs);
                 })
                 .catch((err) => console.error('[session-manager] Failed to persist subagent notification:', err));
             }

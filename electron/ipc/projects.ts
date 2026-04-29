@@ -7,6 +7,7 @@ import { loadProjects, saveProjects } from '../services/storage.js';
 import { readTeamFile, readDecisions, readOrchestrationLogs, readAgentDetails } from '../services/squad-reader.js';
 import { broadcast } from '../services/event-bridge.js';
 import { generateHooksConfig } from '../services/hooks-generator.js';
+import { getHooksServerUrl } from '../hooks-server.js';
 import { validateProjectHooks } from '../services/hook-manager.js';
 import { exec } from 'child_process';
 import { promisify } from 'util';
@@ -202,8 +203,7 @@ export function registerProjectHandlers(ipcMain: IpcMain): void {
     const project = projects.find(p => p.id === id);
     if (!project) throw new Error('Project not found');
 
-    const serverUrl = 'http://localhost:3001';
-    await generateHooksConfig(project.path, serverUrl);
+    await generateHooksConfig(project.path, getHooksServerUrl());
     return { success: true };
   });
 

@@ -1,6 +1,8 @@
 import type { IpcMain } from 'electron';
 import {
   startCopilotSession,
+  resumeCopilotSession,
+  findActiveSessionForProject,
   stopSession,
   sendInput,
   resizeSession,
@@ -111,5 +113,22 @@ export function registerSessionHandlers(ipcMain: IpcMain): void {
   // sessions:history — list all copilot session history for a project
   ipcMain.handle('sessions:history', async (_event, { projectPath }: { projectPath: string }) => {
     return listSessionHistory(projectPath);
+  });
+
+  // sessions:resume — resume a previous copilot session (returns conflict if one is active)
+  ipcMain.handle('sessions:resume', async (_event, { projectId, projectPath, copilotConfig }: { projectId: string; projectPath: string; copilotConfig?: any }) => {
+    if (!projectId || !projectPath) throw new Error('projectId and projectPath are required');
+    return resumeCopilotSession(projectId, projectPath, copilotConfig);
+  });
+
+  // sessions:forceResume — stop active session first, then resume
+  ipcMain.handle('sessions:forceResume', async (_event, { projectId, projectPath, copilotConfig }: { projectId: string; projectPath: string; copilotConfig?: any }) => {
+    if (!projectId || !projectPath) throw new Error('projectId and projectPath are required');
+    const existing = findActiveSessionForProject(projectId);
+    if (existing) {
+      stopSession(existing.id);
+      await new Promise(r => setTimeout(r, 500));
+    }
+    return resumeCopilotSession(projectId, projectPath, copilotConfig);
   });
 }

@@ -303,3 +303,12 @@ export interface SessionHistoryEntry {
 export function getSessionHistory(projectPath: string): Promise<SessionHistoryEntry[]> {
   return window.electronAPI.invoke('sessions:history', { projectPath });
 }
+
+// Resume a previous Copilot CLI session (--resume flag)
+export function resumeCopilotSession(projectId: string, projectPath: string, copilotConfig?: CopilotConfig): Promise<Session | { conflict: true; activeSessionId: string }> {
+  return window.electronAPI.invoke('sessions:resume', { projectId, projectPath, copilotConfig });
+}
+
+export function forceResumeCopilotSession(projectId: string, projectPath: string, copilotConfig?: CopilotConfig): Promise<Session> {
+  return window.electronAPI.invoke('sessions:forceResume', { projectId, projectPath, copilotConfig });
+}
