@@ -5,35 +5,35 @@ Origin: jmanuelcorral
 Label: Squad Center
 Suite: stable
 Codename: stable
-Date: Thu, 09 Apr 2026 05:13:24 UTC
+Date: Wed, 29 Apr 2026 06:51:00 UTC
 Architectures: amd64
 Components: main
 Description: Squad Center - GitHub Copilot CLI session orchestrator
 MD5Sum:
- a22f0418f3a33b5e3112b39524c321f2 782 main/binary-amd64/Packages
- abc05671b8c7c7edee24242febc38774 519 main/binary-amd64/Packages.gz
+ 4947f55ecc92976e61c23e9db1ee3c13 782 main/binary-amd64/Packages
+ 716ade0e167a76ef987c6918cd82322b 520 main/binary-amd64/Packages.gz
  f9f8dab180e232b7020f1275cd397013 162 main/binary-amd64/Release
 SHA1:
- d4c663a7e74addf075c1631c8a95da3a15a6f1c1 782 main/binary-amd64/Packages
- dde9ee3f556fc21e347d450cd4f20f2d2d6d1ba7 519 main/binary-amd64/Packages.gz
+ dee8c965d6d81f9ddf505353ef754d734c7ad86d 782 main/binary-amd64/Packages
+ 848c34b5b35e49541f4e5bc659e4e8124992e37d 520 main/binary-amd64/Packages.gz
  ddea2a107b5177e45500dfada949b1cf24c5d890 162 main/binary-amd64/Release
 SHA256:
- 945daa29e556a4adcbb6af5910a56a19988dadce79d191b34d6112ece5d86b64 782 main/binary-amd64/Packages
- 0b72cf2471efa9c73b38a56803de84e7decbff80795ed20eca06f383e3a9197f 519 main/binary-amd64/Packages.gz
+ 358618d13a64d87f6658edac86c0a770dcc6c38971a08f2a48486a2848a56faf 782 main/binary-amd64/Packages
+ f81a35472a43c64aa84cbbfef099b5537246dbe445788fe44557cb58a2b2ecec 520 main/binary-amd64/Packages.gz
  e20ba125a27395136ad6cc3ed795c5b71dc221d15f1f1c9a47a78eacb2016ff0 162 main/binary-amd64/Release
 -----BEGIN PGP SIGNATURE-----
 
-iQIzBAEBCgAdFiEEkQ2a9p5O2NEuBWEwjtXmPS3Q4M4FAmnXNXQACgkQjtXmPS3Q
-4M5YvxAAlFGlDB1GmmLzBu0Im0QeYZRpEtdrix8tyHN1vsycMNVniUb1yIn2VRxZ
-MrwtNM5gYiWwxDZDeyruGPXcRGD7XGeQ1+tocobi6DUhYI2otWFgmuUpQrp/IUhS
-HIfW++gAmGEQuC6p+m03aSdisrY0pbMb4WlnR+63y5L3ruxEWG4ulQCFwulHqCNN
-0LnjdYFHJK3V4PoXvRATiYmy7SRYQhSkMgbfhfuLDidtaompCQ/NHwkOI0pg24d4
-czvAgc+l8QN9WedRYFe8yCvadt/Xwkwj16n81vDSg3P4URjz0jIK3hmwD7KYm3CV
-dO8+f/cb3CvkyEg6pI8bBxg4utxXXRz9iCB3AZmGI1swntNGNUFek4KYc973GCRt
-s0Br+kI5CU/0VCNRkFCZoTFMpilgz64mkqapsHr9jwYOtfrLl2SjlmgvxvGennAn
-RRPEOCE/REJOLjXKbVSwECIcy6IZZjhr/B5ZqXyiyTCK6s6o5kYvHE7QR8J3iD3b
-KcUvWI4VVTykqvFkTgNsSiGESp/l0GxNVciqg5ZdbR80D0T24NlUehDhIaX2/eVp
-EPEgqftrSybkH/ZKsd8x/M8dJEqFjXuoG4N1sVnkZFeDFgRFN/Ed5+PvrgXBh4GJ
-eFNrsCFgHjNqp/ByDQ6SDGUkz9opRr66i+JVScK95Obr9csIhAI=
-=FnUv
+iQIzBAEBCgAdFiEEkQ2a9p5O2NEuBWEwjtXmPS3Q4M4FAmnxqlQACgkQjtXmPS3Q
+4M7loxAAkY/+wGgJ2DGnJVxHie2dyo2iuo5HtMvuAE/MBFY/YP98JDr1kQGrqoxI
+rmivA0bieVcSVdxhgr3u10QBAGXU3WlyXAjEHMpI9YZvPTIH3+/ochUsFvhNjbuP
+KG9uMaaDBuGfgiO5Eu/ixcHUqqSa08bMaGiv5Jmko3KGr4JVFdBBi8t1Cb01rbjh
+WKsdpDvHswvsYp5Rcp5d1aP7RrvI3lmvAirCO6xy7rk81s+Qtkrrd9CuzYFo4deY
+2UcNqPmF41M2+qXAAEVH+UiNHCuB+rWMUJQ5NiEC5BYGqjgABkFOU3PckIx5E1dD
+kUrzl90iIFr2VAb3dPNGhPCpCfVFWLXCiWK76dFffaI/n3KTd62wLnsbVS91+pzV
+MLvDo0MvcQgmbFQMrWBTYYJBZTGiWvrGrVTEaPKzfhR3v59YraufOx9YJm4xjuYp
+azss5tUruwjRWZ5YjmxTTQAGbBzHbe7ZeCF35DY3jdwd4cjA+Eh0yn+Q1z1Wu2ei
+pou0R14dkn0xRaSG2aL61KlT32pZwy2/8uY1pTcVmREFlN7/a0t/y5zLAeLJQU6N
+cpSUqoyTAKMrR0KCcoTDOkE0PVrAOHm39PqqmUED/yVkrtjs6fCG7m5yMlY4cO+p
+HgJzJevU3uTBQ2bONNNs6Pac/ulYH15y1R04UGrFDRzE9SAw26k=
+=N4QP
 -----END PGP SIGNATURE-----
