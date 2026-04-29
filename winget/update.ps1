@@ -12,16 +12,22 @@ $manifestPath = Join-Path $PSScriptRoot 'jmanuelcorral.SquadCenter.yaml'
 Write-Host "Updating winget manifest to version $Version ..."
 
 $content = Get-Content $manifestPath -Raw
+$installerUrl = "https://github.com/jmanuelcorral/squadcenter/releases/download/v${Version}/Squad-Center-Setup-${Version}.exe"
 
 # Update PackageVersion
-$content = $content -replace '(?<=PackageVersion:\s)[\d]+\.[\d]+\.[\d]+', $Version
+$content = $content -replace '(?m)^PackageVersion:\s.*$', "PackageVersion: $Version"
 
 # Update InstallerUrl
-$content = $content -replace 'v[\d]+\.[\d]+\.[\d]+/Squad-Center-Setup-[\d]+\.[\d]+\.[\d]+\.exe', "v${Version}/Squad-Center-Setup-${Version}.exe"
+$content = $content -replace '(?m)^    InstallerUrl:\s.*$', "    InstallerUrl: $installerUrl"
 
 # Update InstallerSha256
 if ($Sha256) {
-  $content = $content -replace '(?<=InstallerSha256:\s).*', $Sha256
+  $normalizedSha = $Sha256.Trim().ToUpperInvariant()
+  if ($normalizedSha -notmatch '^[A-F0-9]{64}$') {
+    throw "Invalid SHA256 value: $Sha256"
+  }
+
+  $content = $content -replace '(?m)^    InstallerSha256:\s.*$', "    InstallerSha256: $normalizedSha"
 }
 
 Set-Content -Path $manifestPath -Value $content -NoNewline -Encoding UTF8
