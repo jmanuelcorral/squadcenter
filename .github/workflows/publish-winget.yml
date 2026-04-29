@@ -52,7 +52,7 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           .\winget\update.ps1 -Version '${{ steps.version.outputs.VERSION }}' -Sha256 '${{ steps.checksum.outputs.SHA256 }}'
-          winget validate --manifest .\winget\jmanuelcorral.SquadCenter.yaml --disable-interactivity
+          winget validate --manifest .\winget\jmanuelcorral.SquadCenter --disable-interactivity
           if ($LASTEXITCODE -ne 0) {
             throw "winget validate failed with exit code $LASTEXITCODE"
           }
@@ -92,7 +92,7 @@ jobs:
           $packageId = 'jmanuelcorral.SquadCenter'
           $version = '${{ steps.version.outputs.VERSION }}'
           $url = "https://github.com/jmanuelcorral/squadcenter/releases/download/v${version}/Squad-Center-Setup-${version}.exe"
-          $manifestPath = Join-Path $PWD 'winget\jmanuelcorral.SquadCenter.yaml'
+          $manifestPath = Join-Path $PWD 'winget\jmanuelcorral.SquadCenter'
 
           if ([string]::IsNullOrWhiteSpace($env:WINGET_TOKEN)) {
             throw "WINGET_TOKEN is required. Create a GitHub PAT with repo/public_repo access, an expiration of 90 days or less, and SSO authorization for microsoft/winget-pkgs."

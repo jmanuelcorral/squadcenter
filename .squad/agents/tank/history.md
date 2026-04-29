@@ -17,6 +17,7 @@
 - **Secret verification:** All 5 secrets now configured (NPM_TOKEN, CHOCO_API_KEY, GPG_PRIVATE_KEY, GPG_PASSPHRASE). Only WINGET_TOKEN remains manual.
 - **NSIS installer naming mismatch:** electron-builder defaults to spaces in NSIS filenames (e.g., `Squad Center Setup 0.2.1.exe`), but CI globs expect hyphens. Explicit `artifactName` in package.json ensures local file matches the glob pattern; GitHub then sanitizes spaces to hyphens in the release.
 - **Chocolatey nuspec schema compatibility:** The `schemas.chocolatey.org` namespace is incompatible with NuGet v2.7.0 on GitHub Actions runners. Use the official Microsoft schema (`schemas.microsoft.com/packaging/2015/06/nuspec.xsd`) for compatibility across all Chocolatey versions. NuGet's validation requires the Microsoft namespace for proper schema resolution.
+- **winget-pkgs manifest format:** Microsoft validation rejects singleton manifests for submissions. Use split manifests (`version`, `installer`, `defaultLocale`) under `winget/jmanuelcorral.SquadCenter/`.
 
 ## Sessions
 
@@ -35,7 +36,7 @@
 - `chocolatey/tools/chocolateyUninstall.ps1` — registry-based uninstall
 - `chocolatey/tools/VERIFICATION.txt` — standard verification
 - `chocolatey/update.ps1` — CI version/checksum updater
-- `winget/jmanuelcorral.SquadCenter.yaml` — winget singleton manifest v1.6.0
+- `winget/jmanuelcorral.SquadCenter/` — winget split manifests v1.6.0
 - `winget/update.ps1` — CI version/SHA updater
 - `apt-repo/conf/distributions` — reprepro config
 - `apt-repo/conf/options` — reprepro options
