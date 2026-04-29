@@ -2,6 +2,17 @@
 
 All notable changes to Squad Center will be documented in this file.
 
+## [0.3.1] - 2026-04-29
+
+### Fixed
+- **Windows Copilot launch**: Start Copilot CLI sessions through `cmd.exe /d /c` on Windows so Volta-provided `copilot.cmd` shims work with `node-pty`.
+- **Resume session type safety**: Narrow resume conflicts before reading resumed session IDs, fixing CI typecheck failures.
+- **Hooks server URL**: Use the runtime hooks server URL instead of a hardcoded localhost value.
+
+### Added
+- **Session launch coverage**: Add an E2E test that opens a Copilot session from the UI with a mock Copilot CLI, avoiding real credentials.
+- **Resume UX improvements**: Add session resume controls, active-session conflict detection, and force-resume flow from session history.
+
 ## [0.3.0] - 2026-04-09
 
 ### Added
