@@ -1,0 +1,120 @@
+name: Publish WinGet
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version to publish, without the leading v
+        required: true
+        default: 0.3.1
+
+permissions:
+  contents: read
+
+jobs:
+  publish-winget:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Validate version input
+        id: version
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = '${{ inputs.version }}'.TrimStart('v')
+          if ($version -notmatch '^\d+\.\d+\.\d+$') {
+            throw "Invalid version '$version'. Expected SemVer like 0.3.1."
+          }
+          echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Download Windows installer
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = '${{ steps.version.outputs.VERSION }}'
+          $url = "https://github.com/jmanuelcorral/squadcenter/releases/download/v${version}/Squad-Center-Setup-${version}.exe"
+          New-Item -ItemType Directory -Force -Path release | Out-Null
+          Invoke-WebRequest -Uri $url -OutFile "release\Squad-Center-Setup-${version}.exe"
+
+      - name: Compute installer checksum
+        id: checksum
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exe = Get-ChildItem release\Squad-Center-Setup-*.exe | Select-Object -First 1
+          $hash = (Get-FileHash -Path $exe.FullName -Algorithm SHA256).Hash
+          echo "SHA256=$hash" >> $env:GITHUB_OUTPUT
+
+      - name: Update and validate winget manifest
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          .\winget\update.ps1 -Version '${{ steps.version.outputs.VERSION }}' -Sha256 '${{ steps.checksum.outputs.SHA256 }}'
+          winget validate --manifest .\winget\jmanuelcorral.SquadCenter.yaml --disable-interactivity
+          if ($LASTEXITCODE -ne 0) {
+            throw "winget validate failed with exit code $LASTEXITCODE"
+          }
+
+      - name: Install wingetcreate
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Invoke-WebRequest -Uri https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
+
+      - name: Check winget package status
+        id: winget_status
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $packagePath = 'manifests/j/jmanuelcorral/SquadCenter'
+          $headers = @{ 'User-Agent' = 'jmanuelcorral/squadcenter-winget-publish' }
+          $response = Invoke-WebRequest `
+            -Uri "https://api.github.com/repos/microsoft/winget-pkgs/contents/$packagePath" `
+            -Headers $headers `
+            -SkipHttpErrorCheck
+
+          if ($response.StatusCode -eq 200) {
+            echo "EXISTS=true" >> $env:GITHUB_OUTPUT
+            Write-Host "winget package already exists; using wingetcreate update."
+          } elseif ($response.StatusCode -eq 404) {
+            echo "EXISTS=false" >> $env:GITHUB_OUTPUT
+            Write-Host "winget package does not exist yet; submitting local manifest as the initial package."
+          } else {
+            throw "Unable to determine winget package status. GitHub API returned $($response.StatusCode)."
+          }
+
+      - name: Submit winget manifest
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $packageId = 'jmanuelcorral.SquadCenter'
+          $version = '${{ steps.version.outputs.VERSION }}'
+          $url = "https://github.com/jmanuelcorral/squadcenter/releases/download/v${version}/Squad-Center-Setup-${version}.exe"
+          $manifestPath = Join-Path $PWD 'winget\jmanuelcorral.SquadCenter.yaml'
+
+          if ([string]::IsNullOrWhiteSpace($env:WINGET_TOKEN)) {
+            throw "WINGET_TOKEN is required. Create a GitHub PAT with repo/public_repo access, an expiration of 90 days or less, and SSO authorization for microsoft/winget-pkgs."
+          }
+
+          if ('${{ steps.winget_status.outputs.EXISTS }}' -eq 'true') {
+            .\wingetcreate.exe update $packageId `
+              --version $version `
+              --urls $url `
+              --submit `
+              --token $env:WINGET_TOKEN `
+              --no-open `
+              --prtitle "$packageId version $version"
+          } else {
+            .\wingetcreate.exe submit $manifestPath `
+              --token $env:WINGET_TOKEN `
+              --no-open `
+              --prtitle "New package: $packageId version $version"
+          }
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "wingetcreate failed. If the error mentions Microsoft Open Source PAT lifetime policy or SAML SSO, rotate WINGET_TOKEN to a GitHub PAT with an expiration of 90 days or less and authorize SSO for microsoft/winget-pkgs."
+          }
+        env:
+          WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
